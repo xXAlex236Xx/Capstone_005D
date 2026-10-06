@@ -1,0 +1,65 @@
+
+.cosechas-seccion {
+  margin-top: 35px;
+  padding-top: 30px;
+  border-top: 1px solid #e5eae5;
+}
+
+.campos-cosechas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin: 25px 0;
+}
+
+.campos-cosechas .campo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.campos-cosechas select,
+.campos-cosechas input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 13px;
+  border: 1px solid #cbd5ce;
+  border-radius: 8px;
+  font-size: 15px;
+  background: white;
+  color: #222;
+}
+
+.resultado-cosecha {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin: 20px 0;
+  padding: 20px;
+  border-radius: 10px;
+  background: #e8f5e9;
+  color: #245c38;
+}
+
+.resultado-cosecha strong {
+  font-size: 25px;
+}
+
+.aviso-cosechas {
+  padding: 15px;
+  border-radius: 8px;
+  background: #fff3cd;
+  color: #805600;
+}
+
+@media (max-width: 700px) {
+  .campos-cosechas {
+    grid-template-columns: 1fr;
+  }
+
+  .resultado-cosecha {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

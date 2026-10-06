@@ -1,0 +1,295 @@
+
+/* CONTENEDOR PRINCIPAL */
+
+.importacion {
+  margin-top: 35px;
+  padding: 28px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+}
+
+.importacion-encabezado h2 {
+  margin-top: 0;
+  color: #1f2937;
+}
+
+.importacion-encabezado p {
+  color: #64748b;
+}
+
+/* FORMULARIO PARA SUBIR EXCEL */
+
+.importacion-formulario {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+  gap: 18px;
+  padding: 22px;
+  margin: 24px 0;
+  border-radius: 12px;
+  background: #f3f8f3;
+}
+
+.importacion-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.importacion-campo label {
+  font-weight: 600;
+  color: #374151;
+}
+
+.importacion-campo input {
+  max-width: 100%;
+}
+
+.importacion-formulario button {
+  padding: 12px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #217a45;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.importacion-formulario button:hover {
+  background: #176336;
+}
+
+.importacion-formulario button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* TARJETAS DEL RESUMEN */
+
+.importacion-resumen {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.importacion-indicador {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid #dce8df;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.importacion-indicador span {
+  color: #64748b;
+}
+
+.importacion-indicador strong {
+  font-size: 25px;
+  color: #1f2937;
+}
+
+/* ENCABEZADO DE LA TABLA */
+
+.importacion-tabla-encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.importacion-tabla-encabezado h3 {
+  margin: 0;
+}
+
+.importacion-filtro {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* TABLA */
+
+.importacion-tabla-contenedor {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.importacion-tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.importacion-tabla th,
+.importacion-tabla td {
+  padding: 13px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.importacion-tabla th {
+  background: #f8faf8;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.importacion-tabla td {
+  color: #334155;
+}
+
+.importacion-revisar {
+  background: #fffbeb;
+}
+
+/* ESTADOS DE LOS REGISTROS */
+
+.importacion-etiqueta {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.importacion-etiqueta.revisar {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.importacion-etiqueta.correcto {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* CAMPOS DE SECTOR, KILOS Y HORAS */
+
+.importacion-tabla select,
+.importacion-tabla input[type="number"] {
+  width: 150px;
+  max-width: 100%;
+  padding: 9px;
+  border: 1px solid #cbd5ce;
+  border-radius: 7px;
+  background: white;
+  color: #222;
+  font-size: 14px;
+}
+
+.importacion-tabla input[type="number"] {
+  width: 95px;
+}
+
+.importacion-tabla select:focus,
+.importacion-tabla input[type="number"]:focus {
+  outline: 2px solid #217a45;
+  outline-offset: 1px;
+}
+
+/* DISTRIBUCIÓN EN VARIOS SECTORES */
+
+.importacion-distribucion {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 260px;
+}
+
+.importacion-distribucion-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.importacion-distribucion-fila select {
+  min-width: 130px;
+}
+
+.importacion-distribucion-fila input {
+  width: 90px;
+}
+
+.importacion-agregar-sector {
+  align-self: flex-start;
+  padding: 8px 12px;
+  border: 1px solid #217a45;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #217a45;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.importacion-agregar-sector:hover {
+  background: #ecfdf3;
+}
+
+.importacion-quitar-sector {
+  padding: 7px 10px;
+  border: 1px solid #fecaca;
+  border-radius: 7px;
+  background: #fef2f2;
+  color: #b91c1c;
+  cursor: pointer;
+}
+
+.importacion-total {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.importacion-total.correcto {
+  color: #15803d;
+}
+
+.importacion-total.incorrecto {
+  color: #b45309;
+}
+
+/* MENSAJES */
+
+.importacion-error {
+  padding: 12px;
+  border-radius: 8px;
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.importacion-sin-registros,
+.importacion-aviso {
+  padding: 14px;
+  color: #64748b;
+}
+
+.importacion-aviso {
+  margin-top: 20px;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+/* ADAPTACIÓN A PANTALLAS PEQUEÑAS */
+
+@media (max-width: 900px) {
+  .importacion {
+    padding: 16px;
+  }
+
+  .importacion-formulario,
+  .importacion-resumen {
+    grid-template-columns: 1fr;
+  }
+
+  .importacion-tabla-encabezado {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

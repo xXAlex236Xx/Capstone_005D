@@ -1,0 +1,200 @@
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f3f6f3;
+  color: #24352b;
+}
+
+.contenedor {
+  min-height: 100vh;
+}
+
+header {
+  background: #245c38;
+  color: white;
+  padding: 28px 8%;
+}
+
+header h1 {
+  margin: 0 0 8px;
+}
+
+header p {
+  margin: 0;
+  color: #dcebdd;
+}
+
+main {
+  margin: 40px auto;
+  padding: 30px;
+  max-width: 1100px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 18px #0000000d;
+}
+
+h2 {
+  margin-top: 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 25px;
+}
+
+th, td {
+  padding: 15px;
+  text-align: left;
+  border-bottom: 1px solid #e5eae5;
+}
+
+th {
+  background: #eaf2ec;
+}
+
+.activo, .inactivo {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.activo {
+  color: #237a3b;
+  background: #e0f4e5;
+}
+
+.inactivo {
+  color: #a33d3d;
+  background: #fce7e7;
+}
+
+.error {
+  color: #b42318;
+}
+
+.formulario-seccion {
+  padding-bottom: 30px;
+  margin-bottom: 35px;
+  border-bottom: 1px solid #e5eae5;
+}
+
+.campos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin: 25px 0;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.campo label {
+  font-weight: bold;
+}
+
+.campo input {
+  padding: 13px;
+  border: 1px solid #cbd5ce;
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+.campo input:focus {
+  outline: 2px solid #419d62;
+  border-color: transparent;
+}
+
+button {
+  background: #245c38;
+  color: white;
+  padding: 13px 22px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #19472b;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mensaje {
+  color: #237a3b;
+  font-weight: bold;
+}
+
+.tabla-contenedor {
+  overflow-x: auto;
+}
+
+@media (max-width: 700px) {
+  .campos {
+    grid-template-columns: 1fr;
+  }
+
+  main {
+    margin: 20px 12px;
+    padding: 20px;
+  }
+}
+
+/* BOTONES DEL FORMULARIO */
+
+.botones-formulario {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.boton-cancelar {
+  background: #6b7280;
+}
+
+.boton-cancelar:hover {
+  background: #4b5563;
+}
+
+/* BOTONES DE LA TABLA */
+
+.acciones {
+  display: flex;
+  gap: 8px;
+}
+
+.boton-editar {
+  background: #2563eb;
+}
+
+.boton-editar:hover {
+  background: #1d4ed8;
+}
+
+.boton-desactivar {
+  background: #dc6b35;
+}
+
+.boton-desactivar:hover {
+  background: #b84c20;
+}
+
+.boton-desactivar:disabled {
+  background: #d1d5db;
+  color: #6b7280;
+  cursor: not-allowed;
+}

@@ -1,0 +1,26 @@
+DONA LAURA - COPIA RECUPERADA Y ORDENADA
+
+Recuperado desde la copia del 24 de septiembre.
+
+Cambios restaurados:
+- backend/database.py ubicado correctamente en backend.
+- backend/main.py actualizado con /importacion/validar y /importacion/guardar.
+- frontend/src/Importacion.jsx actualizado con validación y guardado de cosechas.
+- frontend/src/Administracion.jsx actualizado con buscador y paginación de jornadas (10 por página).
+- frontend/src/Administracion.css actualizado para buscador/paginación.
+- Eliminada la carpeta backend/frontend accidental.
+- Eliminado __pycache__ del backend.
+
+No se agregó todavía la IA ni el nuevo sistema de pagos semanales: esas funciones se implementarán sobre esta base recuperada para no mezclar código no probado con la restauración.
+
+IMPORTANTE:
+- Se conservó el archivo .env que venía en tu copia local; no lo compartas públicamente ni lo subas a GitHub.
+- Antes de nuevos cambios, haz una copia de esta carpeta.
+
+Backend:
+cd C:\Users\PC\Desktop\DonaLaura\backend
+.\.venv\Scripts\python.exe -m uvicorn main:app --reload
+
+Frontend (otra terminal):
+cd C:\Users\PC\Desktop\DonaLaura\frontend
+npm.cmd run dev
