@@ -20,7 +20,7 @@ function AsistenteIA() {
   const [cargando, setCargando] = useState(false);
   const [herramientas, setHerramientas] = useState([]);
 
-  const finalChatRef = useRef(null);
+  const chatRef = useRef(null);
 
   const preguntasRapidas = [
     "Analiza la empresa y dime qué te preocupa",
@@ -31,7 +31,8 @@ function AsistenteIA() {
   ];
 
   useEffect(() => {
-    finalChatRef.current?.scrollIntoView({
+    chatRef.current?.scrollTo({
+      top: chatRef.current.scrollHeight,
       behavior: "smooth"
     });
   }, [mensajes, cargando]);
@@ -151,48 +152,32 @@ function AsistenteIA() {
       <div className="asistente-contenedor">
 
         <div className="asistente-header">
-          <div>
-            <div className="asistente-titulo">
-              🤖 Asistente Inteligente
-            </div>
+          <div className="asistente-identidad">
+            <div className="asistente-icono">🤖</div>
 
-            <div className="asistente-subtitulo">
-              IA de gestión agrícola · Doña Laura
+            <div>
+              <div className="asistente-titulo">
+                Asistente Inteligente
+              </div>
+
+              <div className="asistente-subtitulo">
+                <span className="estado-punto"></span>
+                Conectado a los datos de Doña Laura
+              </div>
             </div>
           </div>
 
           <button
-            className="boton-limpiar"
+            type="button"
+            className="asistente-nueva"
             onClick={limpiarConversacion}
+            disabled={cargando}
           >
-            Nueva conversación
+            ＋ Nueva conversación
           </button>
         </div>
 
-        <div className="estado-ia">
-          <span className="estado-punto"></span>
-          IA conectada a datos de Doña Laura
-        </div>
-
-        <div className="preguntas-rapidas">
-          {preguntasRapidas.map(
-            (preguntaRapida, indice) => (
-              <button
-                key={indice}
-                onClick={() =>
-                  enviarPregunta(
-                    preguntaRapida
-                  )
-                }
-                disabled={cargando}
-              >
-                {preguntaRapida}
-              </button>
-            )
-          )}
-        </div>
-
-        <div className="chat-contenedor">
+        <div className="chat-contenedor" ref={chatRef}>
 
           {mensajes.map(
             (mensaje, indice) => (
@@ -204,6 +189,10 @@ function AsistenteIA() {
                     : "fila-mensaje ia"
                 }
               >
+                {mensaje.autor === "ia" && (
+                  <div className="avatar-chat">🤖</div>
+                )}
+
                 <div
                   className={
                     mensaje.autor === "usuario"
@@ -211,21 +200,15 @@ function AsistenteIA() {
                       : "mensaje mensaje-ia"
                   }
                 >
-                  {mensaje.autor === "ia" && (
-                    <div className="nombre-ia">
-                      🤖 Asistente Doña Laura
-                    </div>
-                  )}
-
                   <div className="texto-mensaje">
-  {mensaje.autor === "ia" ? (
-    <ReactMarkdown>
-      {mensaje.texto}
-    </ReactMarkdown>
-  ) : (
-    mensaje.texto
-  )}
-</div>
+                    {mensaje.autor === "ia" ? (
+                      <ReactMarkdown>
+                        {mensaje.texto}
+                      </ReactMarkdown>
+                    ) : (
+                      mensaje.texto
+                    )}
+                  </div>
                 </div>
               </div>
             )
@@ -233,11 +216,9 @@ function AsistenteIA() {
 
           {cargando && (
             <div className="fila-mensaje ia">
-              <div className="mensaje mensaje-ia">
-                <div className="nombre-ia">
-                  🤖 Asistente Doña Laura
-                </div>
+              <div className="avatar-chat">🤖</div>
 
+              <div className="mensaje mensaje-ia">
                 <div className="pensando">
                   <span></span>
                   <span></span>
@@ -250,14 +231,12 @@ function AsistenteIA() {
               </div>
             </div>
           )}
-
-          <div ref={finalChatRef}></div>
         </div>
 
         {herramientas.length > 0 && (
           <div className="herramientas-usadas">
             <span>
-              🔎 Fuentes consultadas por la IA:
+              🔎 Fuentes consultadas:
             </span>
 
             {herramientas.map(
@@ -273,39 +252,63 @@ function AsistenteIA() {
           </div>
         )}
 
-        <div className="entrada-chat">
-          <textarea
-            value={pregunta}
-            onChange={(evento) =>
-              setPregunta(
-                evento.target.value
+        <div className="asistente-pie">
+          <div className="preguntas-rapidas">
+            {preguntasRapidas.map(
+              (preguntaRapida, indice) => (
+                <button
+                  type="button"
+                  key={indice}
+                  onClick={() =>
+                    enviarPregunta(
+                      preguntaRapida
+                    )
+                  }
+                  disabled={cargando}
+                >
+                  {preguntaRapida}
+                </button>
               )
-            }
-            onKeyDown={manejarTecla}
-            placeholder="Pregúntame cualquier cosa sobre Doña Laura..."
-            disabled={cargando}
-            rows={1}
-          />
+            )}
+          </div>
 
-          <button
-            onClick={() =>
-              enviarPregunta()
-            }
-            disabled={
-              cargando ||
-              !pregunta.trim()
-            }
-          >
-            {cargando
-              ? "..."
-              : "➤"}
-          </button>
-        </div>
+          <div className="entrada-chat">
+            <textarea
+              value={pregunta}
+              onChange={(evento) =>
+                setPregunta(
+                  evento.target.value
+                )
+              }
+              onKeyDown={manejarTecla}
+              placeholder="Escribe tu pregunta..."
+              disabled={cargando}
+              rows={1}
+            />
 
-        <div className="aviso-ia">
-          La IA entrega análisis y recomendaciones
-          basadas en los datos disponibles. Sus
-          predicciones son orientativas.
+            <button
+              type="button"
+              className="boton-enviar"
+              onClick={() =>
+                enviarPregunta()
+              }
+              disabled={
+                cargando ||
+                !pregunta.trim()
+              }
+              aria-label="Enviar pregunta"
+            >
+              {cargando
+                ? "…"
+                : "➤"}
+            </button>
+          </div>
+
+          <div className="aviso-ia">
+            Enter para enviar · Shift + Enter para salto de línea.
+            La IA entrega análisis basados en los datos disponibles;
+            sus predicciones son orientativas.
+          </div>
         </div>
 
       </div>
