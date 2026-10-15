@@ -1,0 +1,181 @@
+.reportes-encabezado { margin-bottom: 22px; }
+
+.reportes-familias { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; margin-bottom: 20px; }
+
+.reportes-familia {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 18px 20px;
+  background: white;
+  color: #24352b;
+  border: 2px solid #d6e9d8;
+  border-radius: 12px;
+  text-align: left;
+  font-weight: normal;
+}
+
+.reportes-familia strong { font-size: 16px; color: #245c38; }
+.reportes-familia span { font-size: 13px; color: #64748b; }
+.reportes-familia:hover { background: #f3f8f3; }
+.reportes-familia.activa { border-color: #245c38; background: #edf7ee; }
+
+.reportes-filtros {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 15px;
+  margin-bottom: 25px;
+  padding: 22px;
+  background: #f3f8f3;
+  border: 1px solid #d6e9d8;
+  border-radius: 12px;
+}
+
+.reportes-filtros .campo { display: flex; flex-direction: column; gap: 8px; }
+
+.reportes-filtros input,
+.reportes-filtros select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #cbd5ce;
+  border-radius: 8px;
+  background: white;
+  color: #222;
+  font-size: 14px;
+}
+
+.reportes-botones { display: flex; gap: 10px; grid-column: 1 / -1; }
+
+
+.reportes-acciones {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin: 16px 0 4px;
+  flex-wrap: wrap;
+}
+
+.reportes-acciones > div { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+.reportes-acciones > span { color: #64748b; font-size: 14px; }
+.reportes-descarga { color: #245c38; font-weight: 600; text-decoration: underline; }
+
+.reportes-aviso { padding: 12px 16px; background: #fef3c7; color: #92400e; border-radius: 8px; margin-top: 10px; }
+
+.reportes-resultado td.reportes-numero,
+.reportes-resultado th.reportes-numero { text-align: right; }
+
+.reportes-resultado tfoot td { font-weight: bold; background: #eaf2ec; border-top: 2px solid #245c38; }
+
+/* La cabecera con título y filtros solo se ve al imprimir */
+.reportes-cabecera-impresion { display: none; }
+
+@media (max-width: 900px) {
+  .reportes-filtros { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 600px) {
+  .reportes-familias,
+  .reportes-filtros { grid-template-columns: 1fr; }
+  .reportes-botones { flex-direction: column; align-items: stretch; }
+}
+
+/* IMPRESIÓN / PDF */
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+
+  .reportes-resultado,
+  .reportes-resultado * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .reportes-cabecera-impresion {
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #245c38;
+  }
+
+  .reportes-cabecera-impresion .reportes-marca {
+    margin: 0 0 6px;
+    color: #245c38;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .reportes-cabecera-impresion h3 {
+    margin: 0 0 6px;
+    color: #111827;
+    font-size: 20px;
+  }
+
+  .reportes-cabecera-impresion p {
+    margin: 0 0 2px;
+    color: #4b5563;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .reportes-resultado .tabla-contenedor {
+    overflow: visible;
+  }
+
+  .reportes-resultado table {
+    width: 100%;
+    margin-top: 0;
+    font-size: 11px;
+    line-height: 1.3;
+    table-layout: auto;
+  }
+
+  .reportes-resultado th,
+  .reportes-resultado td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #d1d5db;
+    vertical-align: middle;
+  }
+
+  .reportes-resultado th {
+    background: #eaf2ec;
+    color: #1f3a2a;
+    font-size: 10px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  /* Fechas y cifras en una sola línea */
+  .reportes-resultado td,
+  .reportes-resultado th {
+    white-space: nowrap;
+  }
+
+  .reportes-resultado tbody tr:nth-child(even) td {
+    background: #f6f9f6;
+  }
+
+  /* El encabezado se repite en cada hoja y las filas no se parten */
+  .reportes-resultado thead {
+    display: table-header-group;
+  }
+
+  .reportes-resultado tfoot {
+    display: table-row-group;
+  }
+
+  .reportes-resultado tr {
+    break-inside: avoid;
+  }
+
+  .reportes-resultado tfoot td {
+    background: #eaf2ec;
+    border-top: 2px solid #245c38;
+    font-size: 11.5px;
+  }
+}

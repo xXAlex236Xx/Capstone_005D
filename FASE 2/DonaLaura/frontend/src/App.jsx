@@ -1,366 +1,145 @@
-
 import { useEffect, useState } from "react";
 import "./App.css";
+import Trabajadores from "./Trabajadores";
 import Cosechas from "./Cosechas";
 import Productividad from "./Productividad";
+import Pagos from "./Pagos";
+import Reportes from "./Reportes";
 import Administracion from "./Administracion";
 import Importacion from "./Importacion";
 import AnalisisIA from "./AnalisisIA";
 import AsistenteIA from "./AsistenteIA";
-const API_URL = "http://127.0.0.1:8000";
 
-const formularioVacio = {
-  nombre: "",
-  apellido: "",
-  rut: ""
-};
+// "persistente": la pantalla se mantiene montada al cambiar de sección
+// para no perder la conversación o la vista previa en curso.
+const GRUPOS = [
+  {
+    nombre: "Análisis",
+    secciones: [
+      { id: "productividad", etiqueta: "Productividad", icono: "📊", Vista: Productividad },
+      { id: "asistente", etiqueta: "Asistente IA", icono: "💬", Vista: AsistenteIA, persistente: true },
+      { id: "analisis-ia", etiqueta: "Análisis IA", icono: "🤖", Vista: AnalisisIA }
+    ]
+  },
+  {
+    nombre: "Operación",
+    secciones: [
+      { id: "trabajadores", etiqueta: "Trabajadores", icono: "👷", Vista: Trabajadores },
+      { id: "cosechas", etiqueta: "Cosechas", icono: "🥑", Vista: Cosechas },
+      { id: "importacion", etiqueta: "Importación", icono: "📥", Vista: Importacion, persistente: true }
+    ]
+  },
+  {
+    nombre: "Finanzas",
+    secciones: [
+      { id: "pagos", etiqueta: "Pagos", icono: "💰", Vista: Pagos },
+      { id: "reportes", etiqueta: "Reportes", icono: "📄", Vista: Reportes }
+    ]
+  },
+  {
+    nombre: "Sistema",
+    secciones: [
+      { id: "administracion", etiqueta: "Administración", icono: "⚙️", Vista: Administracion }
+    ]
+  }
+];
+
+const SECCIONES = GRUPOS.flatMap((grupo) => grupo.secciones);
+const SECCION_INICIAL = "productividad";
+
+function seccionDesdeHash() {
+  const id = window.location.hash.replace("#", "");
+  return SECCIONES.some((seccion) => seccion.id === id) ? id : SECCION_INICIAL;
+}
 
 function App() {
-  const [trabajadores, setTrabajadores] = useState([]);
-  const [cargando, setCargando] = useState(true);
-  const [guardando, setGuardando] = useState(false);
-  const [desactivandoId, setDesactivandoId] = useState(null);
-  const [editandoId, setEditandoId] = useState(null);
+  const [activa, setActiva] = useState(seccionDesdeHash);
+  const [visitadas, setVisitadas] = useState(() => new Set([seccionDesdeHash()]));
+  const [menuAbierto, setMenuAbierto] = useState(false);
 
-  const [error, setError] = useState("");
-  const [mensaje, setMensaje] = useState("");
-  const [formulario, setFormulario] = useState(formularioVacio);
-
-  // CONSULTAR TRABAJADORES
-  async function cargarTrabajadores() {
-    try {
-      const respuesta = await fetch(`${API_URL}/trabajadores`);
-
-      if (!respuesta.ok) {
-        throw new Error("No se pudieron obtener los trabajadores");
-      }
-
-      const datos = await respuesta.json();
-      setTrabajadores(datos);
-      return true;
-    } catch {
-      setError("No se pudo cargar la lista. Comprueba que FastAPI esté funcionando.");
-      return false;
-    } finally {
-      setCargando(false);
-    }
-  }
-
+  // Mantiene la sección en la URL (#pagos, #reportes...) y responde a atrás/adelante
   useEffect(() => {
-    cargarTrabajadores();
+    function alCambiarHash() {
+      const id = seccionDesdeHash();
+      setActiva(id);
+      setVisitadas((anteriores) => new Set(anteriores).add(id));
+      setMenuAbierto(false);
+      window.scrollTo({ top: 0 });
+    }
+
+    window.addEventListener("hashchange", alCambiarHash);
+    return () => window.removeEventListener("hashchange", alCambiarHash);
   }, []);
 
-  // ACTUALIZAR LOS CAMPOS DEL FORMULARIO
-  function actualizarFormulario(evento) {
-    const { name, value } = evento.target;
-
-    setFormulario((anterior) => ({
-      ...anterior,
-      [name]: value
-    }));
-  }
-
-  // PREPARAR EL FORMULARIO PARA EDITAR
-  function editarTrabajador(trabajador) {
-    setEditandoId(trabajador.id);
-
-    setFormulario({
-      nombre: trabajador.nombre,
-      apellido: trabajador.apellido,
-      rut: trabajador.rut || ""
-    });
-
-    setError("");
-    setMensaje("");
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth"
-    });
-  }
-
-  // CANCELAR LA EDICIÓN
-  function cancelarEdicion() {
-    setEditandoId(null);
-    setFormulario(formularioVacio);
-    setError("");
-    setMensaje("");
-  }
-
-  // REGISTRAR O ACTUALIZAR UN TRABAJADOR
-  async function guardarTrabajador(evento) {
-    evento.preventDefault();
-
-    if (guardando) return;
-
-    setGuardando(true);
-    setError("");
-    setMensaje("");
-
-    const esEdicion = editandoId !== null;
-
-    const url = esEdicion
-      ? `${API_URL}/trabajadores/${editandoId}`
-      : `${API_URL}/trabajadores`;
-
-    try {
-      const respuesta = await fetch(url, {
-        method: esEdicion ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          nombre: formulario.nombre.trim(),
-          apellido: formulario.apellido.trim(),
-          rut: formulario.rut.trim() || null
-        })
-      });
-
-      if (!respuesta.ok) {
-        const datosError = await respuesta.json();
-
-        throw new Error(
-          typeof datosError.detail === "string"
-            ? datosError.detail
-            : "No se pudo guardar el trabajador"
-        );
-      }
-
-      setFormulario(formularioVacio);
-      setEditandoId(null);
-
-      setMensaje(
-        esEdicion
-          ? "¡Trabajador actualizado correctamente!"
-          : "¡Trabajador registrado correctamente!"
-      );
-
-      await cargarTrabajadores();
-
-    } catch (errorCapturado) {
-      setError(errorCapturado.message);
-    } finally {
-      setGuardando(false);
-    }
-  }
-
-  // DESACTIVAR UN TRABAJADOR
-  async function desactivarTrabajador(trabajador) {
-    if (desactivandoId !== null) return;
-
-    const confirmado = window.confirm(
-      `¿Quieres desactivar a ${trabajador.nombre} ${trabajador.apellido}?`
-    );
-
-    if (!confirmado) return;
-
-    setDesactivandoId(trabajador.id);
-    setError("");
-    setMensaje("");
-
-    try {
-      const respuesta = await fetch(
-        `${API_URL}/trabajadores/${trabajador.id}/desactivar`,
-        {
-          method: "PATCH"
-        }
-      );
-
-      if (!respuesta.ok) {
-        const datosError = await respuesta.json();
-
-        throw new Error(
-          typeof datosError.detail === "string"
-            ? datosError.detail
-            : "No se pudo desactivar al trabajador"
-        );
-      }
-
-      setMensaje("¡Trabajador desactivado correctamente!");
-
-      await cargarTrabajadores();
-
-    } catch (errorCapturado) {
-      setError(errorCapturado.message);
-    } finally {
-      setDesactivandoId(null);
-    }
-  }
+  const seccionActual = SECCIONES.find((seccion) => seccion.id === activa);
 
   return (
-    <div className="contenedor">
-      <header>
-        <h1>🌱 Doña Laura</h1>
-        <p>Sistema de Gestión Administrativa Agrícola</p>
-      </header>
+    <div className="aplicacion">
+      <aside className={menuAbierto ? "barra-lateral abierta" : "barra-lateral"}>
+        <div className="marca">
+          <span className="marca-icono">🌱</span>
+          <div>
+            <strong>Doña Laura</strong>
+            <span>Gestión agrícola</span>
+          </div>
+        </div>
 
-      <main>
-        {/* FORMULARIO */}
-        <section className="formulario-seccion">
-          <h2>
-            {editandoId !== null
-              ? "Editar trabajador"
-              : "Registrar trabajador"}
-          </h2>
+        <nav aria-label="Secciones del sistema">
+          {GRUPOS.map((grupo) => (
+            <div className="menu-grupo" key={grupo.nombre}>
+              <p className="menu-grupo-titulo">{grupo.nombre}</p>
 
-          <p>
-            {editandoId !== null
-              ? "Modifica los datos y guarda los cambios."
-              : "Ingresa los datos del nuevo trabajador."}
-          </p>
-
-          <form onSubmit={guardarTrabajador}>
-            <div className="campos">
-              <div className="campo">
-                <label htmlFor="nombre">Nombre</label>
-                <input
-                  id="nombre"
-                  name="nombre"
-                  value={formulario.nombre}
-                  onChange={actualizarFormulario}
-                  maxLength={100}
-                  required
-                  placeholder="Ej.: Carlos"
-                />
-              </div>
-
-              <div className="campo">
-                <label htmlFor="apellido">Apellido</label>
-                <input
-                  id="apellido"
-                  name="apellido"
-                  value={formulario.apellido}
-                  onChange={actualizarFormulario}
-                  maxLength={100}
-                  required
-                  placeholder="Ej.: Muñoz"
-                />
-              </div>
-
-              <div className="campo">
-                <label htmlFor="rut">RUT (opcional)</label>
-                <input
-                  id="rut"
-                  name="rut"
-                  value={formulario.rut}
-                  onChange={actualizarFormulario}
-                  maxLength={12}
-                  placeholder="Ej.: 12345678-9"
-                />
-              </div>
-            </div>
-
-            <div className="botones-formulario">
-              <button type="submit" disabled={guardando}>
-                {guardando
-                  ? "Guardando..."
-                  : editandoId !== null
-                    ? "Guardar cambios"
-                    : "Registrar trabajador"}
-              </button>
-
-              {editandoId !== null && (
-                <button
-                  type="button"
-                  className="boton-cancelar"
-                  onClick={cancelarEdicion}
-                  disabled={guardando}
+              {grupo.secciones.map((seccion) => (
+                <a
+                  key={seccion.id}
+                  href={`#${seccion.id}`}
+                  className={
+                    seccion.id === activa
+                      ? "enlace-menu enlace-actual"
+                      : "enlace-menu"
+                  }
+                  aria-current={seccion.id === activa ? "page" : undefined}
                 >
-                  Cancelar
-                </button>
-              )}
+                  <span aria-hidden="true">{seccion.icono}</span>
+                  {seccion.etiqueta}
+                </a>
+              ))}
             </div>
-          </form>
+          ))}
+        </nav>
+      </aside>
 
-          {mensaje && <p className="mensaje">{mensaje}</p>}
-          {error && <p className="error">{error}</p>}
-        </section>
+      {menuAbierto && (
+        <div className="fondo-menu" onClick={() => setMenuAbierto(false)} />
+      )}
 
-        {/* TABLA DE TRABAJADORES */}
-        <section className="trabajadores-seccion">
-          <h2>Gestión de trabajadores</h2>
-          <p>Trabajadores registrados en el sistema.</p>
+      <div className="contenido">
+        <div className="barra-superior">
+          <button
+            type="button"
+            className="boton-menu"
+            onClick={() => setMenuAbierto(true)}
+            aria-label="Abrir menú"
+          >
+            ☰
+          </button>
+          <strong>{seccionActual.etiqueta}</strong>
+        </div>
 
-          {cargando ? (
-            <p>Cargando trabajadores...</p>
-          ) : (
-            <div className="tabla-contenedor">
-              <table>
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Nombre</th>
-                    <th>Apellido</th>
-                    <th>RUT</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
+        <main>
+          {SECCIONES.map(({ id, Vista, persistente }) => {
+            const esActiva = id === activa;
 
-                <tbody>
-                  {trabajadores.map((trabajador) => (
-                    <tr key={trabajador.id}>
-                      <td>{trabajador.id}</td>
-                      <td>{trabajador.nombre}</td>
-                      <td>{trabajador.apellido}</td>
-                      <td>{trabajador.rut || "Sin registrar"}</td>
+            if (!esActiva && !(persistente && visitadas.has(id))) return null;
 
-                      <td>
-                        <span
-                          className={
-                            trabajador.estado === "Activo"
-                              ? "activo"
-                              : "inactivo"
-                          }
-                        >
-                          {trabajador.estado}
-                        </span>
-                      </td>
-
-                      <td>
-                        <div className="acciones">
-                          <button
-                            type="button"
-                            className="boton-editar"
-                            onClick={() => editarTrabajador(trabajador)}
-                            disabled={guardando}
-                          >
-                            Editar
-                          </button>
-
-                          <button
-                            type="button"
-                            className="boton-desactivar"
-                            onClick={() => desactivarTrabajador(trabajador)}
-                            disabled={
-                              trabajador.estado === "Inactivo" ||
-                              desactivandoId !== null
-                            }
-                          >
-                            {desactivandoId === trabajador.id
-                              ? "Desactivando..."
-                              : "Desactivar"}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {trabajadores.length === 0 && (
-                <p>No hay trabajadores registrados.</p>
-              )}
-            </div>
-          )}
-        </section>
-        <Cosechas />
-        <Productividad />
-        <AsistenteIA />
-        <AnalisisIA />
-        <Administracion />
-        <Importacion />
-      </main>
+            return (
+              <div className="vista-contenido" key={id} hidden={!esActiva}>
+                <Vista />
+              </div>
+            );
+          })}
+        </main>
+      </div>
     </div>
   );
 }

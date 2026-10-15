@@ -22,6 +22,10 @@ from importador import leer_planilla
 
 from database import conectar_bd
 
+from pagos import router as router_pagos, ciclo_de_vida
+
+from reportes import router as router_reportes
+
 
 
 
@@ -40,7 +44,9 @@ app = FastAPI(
 
     description="API de gestion administrativa agricola",
 
-    version="0.1.0"
+    version="0.1.0",
+
+    lifespan=ciclo_de_vida
 
 )
 
@@ -69,6 +75,14 @@ app.add_middleware(
     allow_headers=["*"],
 
 )
+
+
+
+
+
+app.include_router(router_pagos)
+
+app.include_router(router_reportes)
 
 
 
