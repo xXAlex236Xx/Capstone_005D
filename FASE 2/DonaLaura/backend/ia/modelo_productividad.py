@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import numpy as np
@@ -10,9 +11,14 @@ from sklearn.ensemble import IsolationForest, RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent
-DATASET = BASE_DIR / "dataset_cosecha_paltas_2026.csv"
+load_dotenv(BASE_DIR.parent / ".env", override=True)
+
+# Si DATASET_PATH está en el .env se usa ese archivo (datos reales);
+# si no, el CSV de ejemplo con trabajadores anonimizados incluido en el repo.
+DATASET = Path(os.getenv("DATASET_PATH") or BASE_DIR / "dataset_cosecha_paltas_2026.csv")
 
 MIN_DIAS_CLUSTER = 4
 MIN_REGISTROS_PREDICCION = 5

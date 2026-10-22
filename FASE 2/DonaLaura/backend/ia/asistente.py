@@ -343,13 +343,13 @@ def responder_chat(pregunta):
             "respuesta": (
                 "🤖 Puedo analizar los datos históricos de Doña Laura.\n\n"
                 "Puedes preguntarme, por ejemplo:\n\n"
-                "• ¿Cómo va Rubén Fabrica?\n"
+                "• ¿Cómo va T-01?\n"
                 "• ¿Quién produce más?\n"
                 "• ¿Quién viene a la baja?\n"
-                "• ¿Qué predice la IA para Manuel?\n"
+                "• ¿Qué predice la IA para T-02?\n"
                 "• ¿Qué registros son atípicos?\n"
                 "• ¿Qué tan preciso es el modelo?\n"
-                "• Si el kilo vale $80, ¿cuánto habría ganado Rubén?"
+                "• Si el kilo vale $80, ¿cuánto habría ganado T-01?"
             ),
             "tipo": "ayuda"
         }
@@ -419,7 +419,7 @@ def responder_chat(pregunta):
                     "💰 Puedo hacer una simulación de pago, "
                     "pero necesito que me indiques el precio por kilo.\n\n"
                     "Por ejemplo: "
-                    "\"Si el kilo vale $80, ¿cuánto habría ganado Rubén?\""
+                    "\"Si el kilo vale $80, ¿cuánto habría ganado T-01?\""
                 ),
                 "tipo": "pago"
             }
@@ -430,7 +430,7 @@ def responder_chat(pregunta):
                     "Encontré el precio por kilo, pero necesito que "
                     "me indiques el trabajador.\n\n"
                     "Ejemplo: "
-                    "\"Si el kilo vale $80, ¿cuánto habría ganado Rubén?\""
+                    "\"Si el kilo vale $80, ¿cuánto habría ganado T-01?\""
                 ),
                 "tipo": "pago"
             }
@@ -623,10 +623,10 @@ def responder_chat(pregunta):
         "respuesta": (
             "🤖 No entendí completamente esa consulta todavía.\n\n"
             "Puedes preguntarme cosas como:\n"
-            "• ¿Cómo va Rubén Fabrica?\n"
+            "• ¿Cómo va T-01?\n"
             "• ¿Quién produce más?\n"
             "• ¿Quién viene a la baja?\n"
-            "• ¿Qué predice la IA para Manuel?\n"
+            "• ¿Qué predice la IA para T-02?\n"
             "• ¿Qué datos son atípicos?\n"
             "• ¿Qué tan preciso es el modelo?"
         ),
