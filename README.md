@@ -77,6 +77,17 @@ uvicorn main:app --reload
 
 La API queda en http://127.0.0.1:8000 y la documentación interactiva en http://127.0.0.1:8000/docs.
 
+### Pruebas automatizadas
+
+Desde la carpeta `FASE 2/DonaLaura/backend`, instala las dependencias de prueba y ejecuta:
+
+```
+pip install -r requirements-test.txt
+python -m pytest
+```
+
+Estas pruebas iniciales verifican la respuesta de bienvenida y una validación de la API. No requieren tener PostgreSQL iniciado.
+
 ### 3. Frontend
 
 En otra terminal, dentro de `FASE 2/DonaLaura/frontend`:
