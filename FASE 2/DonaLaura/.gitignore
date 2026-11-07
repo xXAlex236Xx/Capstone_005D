@@ -72,6 +72,8 @@ $RECYCLE.BIN/
 
 # ---------- RESPALDOS LOCALES ----------
 *respaldo*.py
+!backend/respaldo.py
+!backend/tests/test_respaldo.py
 *RESPALDO*/
 *_backup/
 *_backup.*

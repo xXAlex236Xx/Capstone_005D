@@ -1,6 +1,8 @@
 
 
+import os
 import psycopg
+from dotenv import load_dotenv
 
 
 
@@ -9,6 +11,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from pydantic import BaseModel, Field
+from typing import Literal
 
 from collections import Counter
 
@@ -20,9 +23,18 @@ from importador import leer_planilla
 
 
 
-from database import conectar_bd
+from database import conectar_bd, BASE_DIR
+from seguridad import ControlAcceso, router as router_acceso
+from resumen import router as router_resumen
+from operacion import router as router_operacion
+from seguimiento import router as router_seguimiento
+from faenas import router as router_faenas
+from entorno import router as router_entorno
+from cobros import router as router_cobros
+from semana import router as router_semana
 
 from pagos import router as router_pagos, ciclo_de_vida
+from pagos import exigir_semana_abierta, lunes_de
 
 from reportes import router as router_reportes
 
@@ -54,6 +66,7 @@ app = FastAPI(
 
 # Permitir la conexión desde nuestro frontend React
 
+app.add_middleware(ControlAcceso)
 app.add_middleware(
 
     CORSMiddleware,
@@ -66,7 +79,7 @@ app.add_middleware(
 
     ],
 
-    allow_credentials=False,
+    allow_credentials=True,
 
     allow_methods=["GET", "POST", "PUT", "PATCH"
 
@@ -83,6 +96,24 @@ app.add_middleware(
 app.include_router(router_pagos)
 
 app.include_router(router_reportes)
+app.include_router(router_acceso)
+app.include_router(router_faenas)
+app.include_router(router_entorno)
+app.include_router(router_cobros)
+app.include_router(router_semana)
+app.include_router(router_resumen)
+app.include_router(router_operacion)
+app.include_router(router_seguimiento)
+
+
+@app.get("/health")
+def salud():
+    try:
+        with conectar_bd() as conexion:
+            conexion.execute("SELECT 1")
+        return {"estado": "ok", "base_datos": "disponible"}
+    except psycopg.Error as error:
+        raise HTTPException(503, "No se pudo conectar con la base de datos") from error
 
 
 
@@ -677,6 +708,16 @@ def registrar_produccion(produccion: ProduccionCrear):
                     )
 
 
+
+                # La producción y el cierre comparten el bloqueo de la semana.
+                cursor.execute(
+                    "SELECT fecha FROM jornadas WHERE id_jornada = %s",
+                    (produccion.id_jornada,)
+                )
+                jornada = cursor.fetchone()
+                if jornada is None:
+                    raise HTTPException(status_code=404, detail="Jornada no encontrada")
+                exigir_semana_abierta(cursor, jornada[0])
 
                 # Registrar la cosecha
 
@@ -1670,6 +1711,9 @@ def guardar_importacion(lote: LoteImportacion):
             with conexion.cursor() as cursor:
                 # Serializa importaciones simultáneas de este módulo.
                 cursor.execute("SELECT pg_advisory_xact_lock(20260925, 1)")
+                # Orden estable para evitar interbloqueos entre lotes de varias semanas.
+                for semana in sorted({lunes_de(r.fecha) for r in lote.registros}):
+                    exigir_semana_abierta(cursor, semana)
                 cursor.execute("SELECT id_trabajador, nombre, apellido, estado FROM trabajadores")
                 por_nombre = {}
                 for id_trabajador, nombre, apellido, estado in cursor.fetchall():
@@ -1758,7 +1802,7 @@ def guardar_importacion(lote: LoteImportacion):
 # =====================================================
 
 @app.get("/ia/analisis")
-def obtener_analisis_ia():
+def obtener_analisis_ia(fuente: Literal["operacion", "historico"] = "operacion"):
     """Analiza el histórico de cosecha de paltas con modelos de IA.
 
     Agrupa patrones de producción, detecta registros atípicos y genera una
@@ -1767,7 +1811,7 @@ def obtener_analisis_ia():
     """
     try:
         from ia.modelo_productividad import generar_analisis
-        return generar_analisis()
+        return generar_analisis(fuente=fuente)
     except ModuleNotFoundError as error:
         print(f"DEPENDENCIA IA FALTANTE: {error}")
         raise HTTPException(
@@ -1835,6 +1879,18 @@ class ConsultaAgenteLLM(BaseModel):
 @app.post("/ia/agente")
 def agente_inteligente(datos: ConsultaAgenteLLM):
     try:
+        # Permite completar la configuración sin reiniciar la aplicación.
+        load_dotenv(BASE_DIR / ".env", override=True)
+        clave = (os.getenv("OPENAI_API_KEY") or "").strip()
+        if not clave or clave == "escribir_la_clave_de_openai":
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "El asistente avanzado aún no está configurado. "
+                    "Falta configurar OPENAI_API_KEY en el archivo .env del backend. "
+                    "El resto de la aplicación sigue disponible."
+                ),
+            )
         from ia.agente_llm import responder_agente
 
         historial = [
@@ -1850,6 +1906,14 @@ def agente_inteligente(datos: ConsultaAgenteLLM):
             historial
         )
 
+    except HTTPException:
+        raise
+    except ModuleNotFoundError as error:
+        print(f"DEPENDENCIA DEL ASISTENTE FALTANTE: {error.name}")
+        raise HTTPException(
+            status_code=503,
+            detail="Faltan dependencias del asistente. Instala requirements_ia.txt en el backend.",
+        ) from error
     except Exception as error:
         print(
             f"ERROR EN AGENTE LLM: "

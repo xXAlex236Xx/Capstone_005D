@@ -1,15 +1,25 @@
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useEffect, useRef, useState } from "react";
 import "./AsistenteIA.css";
 
-const API_URL = "http://127.0.0.1:8000";
+import { API as API_URL, apiFetch as fetch } from "./api";
+import Icon from "./Icon";
+const FUENTES = {
+  resumen_empresa: "Resumen de la operación", listar_trabajadores: "Trabajadores",
+  analizar_trabajador: "Análisis por trabajador", comparar_trabajadores: "Comparación de jornadas",
+  ranking_trabajadores: "Producción por trabajador", registros_atipicos: "Registros atípicos",
+  consultar_produccion_bd: "Producción registrada", simular_pago_historico: "Simulación de pagos",
+  estado_modelo_ia: "Evaluación del modelo",
+  consultar_gestion: "Clientes, faenas, cobros y pagos",
+};
 
 function AsistenteIA() {
   const [mensajes, setMensajes] = useState([
     {
       autor: "ia",
       texto:
-        "Hola 👋 Soy el Asistente Inteligente de Doña Laura.\n\n" +
+        "Hola Soy el Asistente Inteligente de Doña Laura.\n\n" +
         "Puedo analizar producción, comparar trabajadores, revisar tendencias, " +
         "buscar anomalías, consultar información de la empresa y darte recomendaciones basadas en los datos.\n\n" +
         "¿Qué quieres revisar?"
@@ -24,6 +34,9 @@ function AsistenteIA() {
 
   const preguntasRapidas = [
     "Analiza la empresa y dime qué te preocupa",
+    "¿Qué clientes concentran más kilos?",
+    "¿Qué clientes nos deben dinero y cuánto queda pendiente?",
+    "¿Cuánto queda pendiente de pago a trabajadores?",
     "¿Quiénes tienen mejor rendimiento?",
     "¿Qué trabajadores vienen a la baja?",
     "¿Hay registros extraños?",
@@ -82,8 +95,11 @@ function AsistenteIA() {
       );
 
       if (!respuesta.ok) {
+        const detalle = await respuesta.json().catch(() => null);
         throw new Error(
-          `Error HTTP ${respuesta.status}`
+          typeof detalle?.detail === "string"
+            ? detalle.detail
+            : "El asistente no pudo procesar la consulta. Intenta nuevamente."
         );
       }
 
@@ -114,8 +130,9 @@ function AsistenteIA() {
         {
           autor: "ia",
           texto:
-            "⚠️ No pude comunicarme con el asistente inteligente. " +
-            "Verifica que el backend esté funcionando."
+            "⚠️ " + (error instanceof TypeError
+              ? "No se pudo conectar con el backend. Comprueba que esté funcionando."
+              : error.message)
         }
       ]);
 
@@ -139,7 +156,7 @@ function AsistenteIA() {
       {
         autor: "ia",
         texto:
-          "Conversación nueva 👋\n\n" +
+          "Conversación nueva \n\n" +
           "¿Qué quieres analizar de Doña Laura?"
       }
     ]);
@@ -153,7 +170,7 @@ function AsistenteIA() {
 
         <div className="asistente-header">
           <div className="asistente-identidad">
-            <div className="asistente-icono">🤖</div>
+            <div className="asistente-icono"><Icon nombre="asistente" /></div>
 
             <div>
               <div className="asistente-titulo">
@@ -162,7 +179,7 @@ function AsistenteIA() {
 
               <div className="asistente-subtitulo">
                 <span className="estado-punto"></span>
-                Conectado a los datos de Doña Laura
+                Consultas de producción y gestión agrícola
               </div>
             </div>
           </div>
@@ -190,7 +207,7 @@ function AsistenteIA() {
                 }
               >
                 {mensaje.autor === "ia" && (
-                  <div className="avatar-chat">🤖</div>
+                  <div className="avatar-chat"><Icon nombre="asistente" size={15} /></div>
                 )}
 
                 <div
@@ -202,7 +219,7 @@ function AsistenteIA() {
                 >
                   <div className="texto-mensaje">
                     {mensaje.autor === "ia" ? (
-                      <ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {mensaje.texto}
                       </ReactMarkdown>
                     ) : (
@@ -216,7 +233,7 @@ function AsistenteIA() {
 
           {cargando && (
             <div className="fila-mensaje ia">
-              <div className="avatar-chat">🤖</div>
+              <div className="avatar-chat"><Icon nombre="asistente" size={15} /></div>
 
               <div className="mensaje mensaje-ia">
                 <div className="pensando">
@@ -236,7 +253,7 @@ function AsistenteIA() {
         {herramientas.length > 0 && (
           <div className="herramientas-usadas">
             <span>
-              🔎 Fuentes consultadas:
+              Fuentes consultadas:
             </span>
 
             {herramientas.map(
@@ -245,7 +262,7 @@ function AsistenteIA() {
                   className="herramienta-chip"
                   key={`${herramienta}-${indice}`}
                 >
-                  {herramienta}
+                  {FUENTES[herramienta] || "Datos de la operación"}
                 </span>
               )
             )}
@@ -274,6 +291,7 @@ function AsistenteIA() {
 
           <div className="entrada-chat">
             <textarea
+              aria-label="Pregunta al asistente"
               value={pregunta}
               onChange={(evento) =>
                 setPregunta(

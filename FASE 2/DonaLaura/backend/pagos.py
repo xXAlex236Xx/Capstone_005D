@@ -1,5 +1,8 @@
 import csv
 import io
+import asyncio
+import logging
+from contextlib import suppress
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
@@ -53,8 +56,25 @@ def crear_tablas_pagos():
 
 @asynccontextmanager
 async def ciclo_de_vida(app):
+    from seguridad import inicializar_seguridad
     crear_tablas_pagos()
-    yield
+    inicializar_seguridad()
+    async def revisar_respaldos():
+        from respaldo import crear_diario
+        from starlette.concurrency import run_in_threadpool
+        while True:
+            try:
+                await run_in_threadpool(crear_diario)
+            except Exception as error:
+                logging.getLogger("agricolix.respaldo").error("No se completó el respaldo diario: %s",type(error).__name__)
+            await asyncio.sleep(3600)
+    tarea=asyncio.create_task(revisar_respaldos())
+    try:
+        yield
+    finally:
+        tarea.cancel()
+        with suppress(asyncio.CancelledError):
+            await tarea
 
 
 # =====================================================
@@ -96,6 +116,24 @@ def semana_cerrada(cursor, semana_inicio: date):
         (semana_inicio,)
     )
     return cursor.fetchone()[0]
+
+
+def bloquear_semana(cursor, semana_inicio: date):
+    """Serializa producción, tarifas y cierre hasta terminar la transacción."""
+    cursor.execute(
+        "SELECT pg_advisory_xact_lock(20261015, %s)",
+        (semana_inicio.toordinal(),)
+    )
+
+
+def exigir_semana_abierta(cursor, fecha: date):
+    semana_inicio = lunes_de(fecha)
+    bloquear_semana(cursor, semana_inicio)
+    if semana_cerrada(cursor, semana_inicio) is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="La semana ya está cerrada; no se puede modificar su producción ni su tarifa"
+        )
 
 
 def kilos_de_la_semana(cursor, semana_inicio: date):
@@ -229,12 +267,7 @@ def guardar_tarifa(fecha: date, tarifa: TarifaGuardar):
     try:
         with conectar_bd() as conexion:
             with conexion.cursor() as cursor:
-                if semana_cerrada(cursor, semana_inicio) is not None:
-                    raise HTTPException(
-                        status_code=409,
-                        detail="La semana ya está cerrada; no se puede cambiar su tarifa"
-                    )
-
+                exigir_semana_abierta(cursor, semana_inicio)
                 cursor.execute(
                     """
                     INSERT INTO tarifas (semana_inicio, precio_kg)
@@ -290,10 +323,7 @@ def cerrar_semana(cierre: CierreSemana):
         with conectar_bd() as conexion:
             with conexion.cursor() as cursor:
                 # Evita cierres simultáneos de la misma semana.
-                cursor.execute(
-                    "SELECT pg_advisory_xact_lock(20261015, %s)",
-                    (semana_inicio.toordinal(),)
-                )
+                bloquear_semana(cursor, semana_inicio)
 
                 if semana_cerrada(cursor, semana_inicio) is not None:
                     raise HTTPException(

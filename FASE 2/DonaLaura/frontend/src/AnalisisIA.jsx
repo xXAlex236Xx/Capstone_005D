@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import "./AnalisisIA.css";
 
-const API = "http://127.0.0.1:8000";
+import { API, apiFetch as fetch } from "./api";
 
 function formatoNumero(valor, decimales = 0) {
   if (valor === null || valor === undefined || Number.isNaN(Number(valor))) {
@@ -25,14 +25,15 @@ function AnalisisIA() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [busqueda, setBusqueda] = useState("");
-  const [soloAnalizados, setSoloAnalizados] = useState(true);
+  const [soloAnalizados, setSoloAnalizados] = useState(false);
+  const [fuente, setFuente] = useState("operacion");
 
-  async function cargarAnalisis() {
+  const cargarAnalisis = useCallback(async () => {
     setCargando(true);
     setError("");
 
     try {
-      const respuesta = await fetch(`${API}/ia/analisis`);
+      const respuesta = await fetch(`${API}/ia/analisis?fuente=${fuente}`);
       const datos = await respuesta.json();
 
       if (!respuesta.ok) {
@@ -49,11 +50,11 @@ function AnalisisIA() {
     } finally {
       setCargando(false);
     }
-  }
+  }, [fuente]);
 
   useEffect(() => {
     cargarAnalisis();
-  }, []);
+  }, [cargarAnalisis]);
 
   const trabajadoresFiltrados = useMemo(() => {
     if (!analisis) return [];
@@ -72,7 +73,7 @@ function AnalisisIA() {
     <section className="ia-seccion">
       <div className="ia-encabezado">
         <div>
-          <span className="ia-etiqueta">🤖 {analisis?.version || "IA"}</span>
+          <span className="ia-etiqueta">{analisis?.version || "IA"}</span>
           <h2>Análisis inteligente de productividad</h2>
           <p>
             Analiza patrones históricos de cosecha, detecta valores atípicos y
@@ -80,6 +81,12 @@ function AnalisisIA() {
           </p>
         </div>
 
+        <label className="campo">Fuente de datos
+          <select value={fuente} onChange={e => setFuente(e.target.value)} disabled={cargando}>
+            <option value="operacion">Producción registrada</option>
+            <option value="historico">Histórico de ejemplo · CSV</option>
+          </select>
+        </label>
         <button type="button" onClick={cargarAnalisis} disabled={cargando}>
           {cargando ? "Analizando..." : "Actualizar análisis"}
         </button>
@@ -98,11 +105,11 @@ function AnalisisIA() {
         <>
           <div className="ia-tarjetas">
             <article>
-              <span>Registros históricos</span>
+              <span>Jornadas registradas</span>
               <strong>{formatoNumero(analisis.registros_historicos)}</strong>
             </article>
             <article>
-              <span>Trabajadores históricos</span>
+              <span>Trabajadores en la fuente</span>
               <strong>{formatoNumero(analisis.trabajadores_historicos)}</strong>
             </article>
             <article>
@@ -143,12 +150,14 @@ function AnalisisIA() {
                   {formatoNumero(analisis.modelo_predictivo.registros_entrenamiento)}
                 </strong>
               </div>
-              <p>{analisis.modelo_predictivo.descripcion}</p>
+              <div><span>Error de referencia · media de 3 jornadas</span><strong>{formatoNumero(analisis.modelo_predictivo.mae_referencia_kg, 1)} kg</strong></div>
+              <p>{analisis.modelo_predictivo.descripcion} Evaluación con corte temporal: {analisis.modelo_predictivo.fecha_corte}. {analisis.modelo_predictivo.mejora_referencia ? "El modelo mejora la referencia en esta evaluación." : "El modelo no mejora la referencia en esta evaluación; interpreta la estimación con cautela."}</p>
             </div>
           )}
 
           <div className="ia-controles">
             <input
+              aria-label="Buscar trabajador en el análisis"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar trabajador..."
@@ -172,13 +181,14 @@ function AnalisisIA() {
                   <th>Días</th>
                   <th>Promedio</th>
                   <th>Total</th>
-                  <th>Tendencia</th>
+                  <th title="Cambio estimado por una recta ajustada a las últimas 20 jornadas disponibles, relativo a su promedio de kilos diarios. No ajusta horas ni condiciones.">Tendencia reciente</th>
                   <th>Predicción</th>
                   <th>Perfil IA</th>
                   <th>Apoyo al análisis</th>
                 </tr>
               </thead>
               <tbody>
+                {trabajadoresFiltrados.length === 0 && <tr><td colSpan={8} className="empty-table">No hay trabajadores que coincidan con estos filtros. Si tienes pocos registros, desactiva el filtro de datos suficientes.</td></tr>}
                 {trabajadoresFiltrados.map((trabajador) => (
                   <tr key={trabajador.trabajador}>
                     <td>
@@ -194,10 +204,10 @@ function AnalisisIA() {
                       <span className={claseTendencia(trabajador.tendencia)}>
                         {trabajador.tendencia}
                       </span>
-                      <small>
+                      {trabajador.dias_trabajados >= analisis.minimo_dias_para_ia && <small>
                         {trabajador.tendencia_pct > 0 ? "+" : ""}
                         {formatoNumero(trabajador.tendencia_pct, 1)}%
-                      </small>
+                      </small>}
                     </td>
                     <td>
                       {trabajador.prediccion_proxima_jornada_kg === null ? (
@@ -224,7 +234,7 @@ function AnalisisIA() {
             <div className="ia-atipicos">
               <div className="ia-subtitulo">
                 <div>
-                  <h3>🔎 Registros atípicos detectados</h3>
+                  <h3>Registros atípicos detectados</h3>
                   <p>
                     Son valores que se alejan del patrón habitual del trabajador.
                     Deben revisarse; no significa automáticamente que estén mal.

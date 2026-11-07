@@ -1,0 +1,38 @@
+.simulador-vista .page-heading { align-items: center; gap: 20px; }
+.simulador-vista .page-heading button { display: inline-flex; gap: 8px; align-items: center; white-space: nowrap; }
+.sim-aviso { display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: #edf2e8; color: #607158; font-size: 12px; border: 1px solid #dce5d3; border-radius: 9px; margin: 24px 0; line-height: 1.7; }
+.sim-aviso svg { flex-shrink: 0; }
+.sim-layout { display: grid; grid-template-columns: minmax(290px, .85fr) minmax(0, 1.65fr); align-items: start; gap: 22px; }
+.sim-form { padding: 25px; }
+.sim-panel-title { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 22px; }
+.sim-step { background: #eff3eb; color: #78906c; font-size: 11px; border-radius: 8px; padding: 9px; font-variant-numeric: tabular-nums; }
+.sim-panel-title h2 { font-size: 15px; color: #334d3c; margin: 0 0 6px; font-weight: 600; }
+.sim-panel-title p { font-size: 11px; color: #7b887a; margin: 0; line-height: 1.6; }
+.sim-campos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 14px; }
+.sim-campo { display: flex; flex-direction: column; gap: 8px; color: #52624f; font-size: 11px; line-height: 1.5; }
+.sim-campo > div { position: relative; }
+.sim-campo input { box-sizing: border-box; width: 100%; min-width: 0; padding: 12px 43px 12px 11px; border: 1px solid #dbe3d6; border-radius: 7px; background: #fafbf8; color: #2d4533; font-size: 14px; font-variant-numeric: tabular-nums; }
+.sim-campo input:focus { outline: 2px solid #91ae84; outline-offset: 2px; }
+.sim-campo input:invalid { border-color: #bb7765; }
+.sim-campo > div > span { position: absolute; right: 11px; top: 14px; color: #84917c; font-size: 10px; pointer-events: none; }
+.sim-campo input::-webkit-inner-spin-button { appearance: none; }
+.sim-nombre { margin-bottom: 23px; }.sim-nombre input { padding-right: 11px; font-size: 12px; }
+.sim-ayuda, .sim-nota { font-size: 11px; line-height: 1.9; color: #7f8a79; margin: 23px 0 0; }
+.sim-veredicto { padding: 24px 27px; background: #fff6e7; border: 1px solid #ecdcb9; border-radius: 11px; color: #795b26; margin-bottom: 18px; }
+.sim-veredicto h2 { font-size: 22px; letter-spacing: -.5px; margin: 11px 0; color: inherit; line-height: 1.3; }
+.sim-veredicto .eyebrow { color: inherit; font-size: 9px; }.sim-veredicto p { font-size: 12px; line-height: 1.8; margin: 0; }
+.sim-veredicto.riesgo { background: #fbefeb; border-color: #eacfc6; color: #94543c; }.sim-veredicto.favorable { background: #eaf3e8; border-color: #d2e4cd; color: #3c683f; }
+.sim-kpis { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin-bottom: 18px; }
+.sim-kpis article { border-radius: 9px; background: #fff; border: 1px solid #e2e8dc; padding: 19px 16px; min-width: 0; }
+.sim-kpis span,.sim-objetivos article > span { display: block; font-size: 10px; color: #7b8974; }
+.sim-kpis strong { display: block; font-size: clamp(17px,1.7vw,25px); font-weight: 600; color: #334e3a; margin: 13px 0 7px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.sim-kpis small { font-size: 10px; color: #819078; line-height: 1.7; display: block; }.sim-kpis .negativo strong { color: #a3563c; }
+.sim-grafico { padding: 23px 25px; }.sim-range-label { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #74836b; gap: 12px; }.sim-range-label strong { font-size: 17px; color: #31593e; }.sim-range-label small { font-size: 11px; font-weight: 400; }
+.sim-grafico input[type=range] { width: 100%; accent-color: #347252; margin: 14px 0 0; cursor: pointer; }.sim-grafico svg { display: block; width: 100%; }
+.sim-riesgo { border-top: 1px solid #e7ebdf; padding-top: 15px; font-size: 11px; line-height: 1.8; }.sim-riesgo strong { display: block; color: #65543a; }.sim-riesgo span { color: #7c8474; }
+.sim-objetivos { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin-top: 20px; }.sim-objetivos article { padding: 0 4px; min-width: 0; }.sim-objetivos strong { color: #3d5c42; font-size: 23px; font-weight: 600; display: block; margin-top: 12px; overflow-wrap: anywhere; }.sim-objetivos small { font-size: 11px; font-weight: 400; }.sim-objetivos p { font-size: 10px; color: #839078; line-height: 1.7; margin-bottom: 0; }
+.simulador-vista .sim-probar { background: none; border: none; color: #376840; display: inline-flex; align-items: center; gap: 6px; font-size: 10px; padding: 9px 0; text-decoration: underline; box-shadow: none; }
+.sim-comparacion { padding: 25px; margin-top: 26px; }.sim-comparacion .tabla-contenedor { border: 0; }.sim-comparacion table { min-width: 690px; }.sim-comparacion td { font-variant-numeric: tabular-nums; }.sim-perdida { color: #a45b44 !important; }.sim-ganancia { color: #3c7048 !important; }
+@media(max-width:1200px) { .sim-layout { grid-template-columns: minmax(250px,.85fr) minmax(0,1.4fr); }.sim-campos { grid-template-columns: minmax(0,1fr); }.sim-kpis { gap: 7px; }.sim-kpis article { padding: 16px 10px; }.sim-objetivos strong { font-size: 19px; } }
+@media(max-width:1000px) { .sim-layout { grid-template-columns: minmax(0,1fr); }.sim-campos { grid-template-columns: repeat(3,minmax(0,1fr)); }.sim-kpis strong { font-size: 23px; } }
+@media(max-width:600px) { .simulador-vista .page-heading { flex-wrap: wrap; }.sim-campos { grid-template-columns: repeat(2,minmax(0,1fr)); }.sim-form,.sim-grafico,.sim-comparacion { padding: 18px; }.sim-kpis { grid-template-columns: minmax(0,1fr); gap: 9px; }.sim-kpis article { padding: 16px; }.sim-kpis strong { margin: 8px 0 5px; }.sim-objetivos { grid-template-columns: minmax(0,1fr); gap: 18px; }.sim-objetivos article { padding: 0 0 16px; border-bottom: 1px solid #e0e7d9; }.sim-objetivos strong { margin-top: 7px; }.sim-veredicto { padding: 20px; }.sim-veredicto h2 { font-size: 20px; }.sim-aviso { align-items: flex-start; } }

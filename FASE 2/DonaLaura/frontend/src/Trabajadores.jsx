@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const API_URL = "http://127.0.0.1:8000";
+import { API as API_URL, apiFetch as fetch } from "./api";
 
 const formularioVacio = {
   nombre: "",
@@ -8,7 +8,10 @@ const formularioVacio = {
   rut: ""
 };
 
-function Trabajadores() {
+function Trabajadores({ usuario }) {
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
+  const [estado, setEstado] = useState("Todos");
   const [trabajadores, setTrabajadores] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -32,7 +35,7 @@ function Trabajadores() {
       setTrabajadores(datos);
       return true;
     } catch {
-      setError("No se pudo cargar la lista. Comprueba que FastAPI esté funcionando.");
+      setError("No se pudo cargar la lista. Comprueba la conexión con el sistema.");
       return false;
     } finally {
       setCargando(false);
@@ -55,6 +58,7 @@ function Trabajadores() {
 
   // PREPARAR EL FORMULARIO PARA EDITAR
   function editarTrabajador(trabajador) {
+    setMostrarFormulario(true);
     setEditandoId(trabajador.id);
 
     setFormulario({
@@ -74,6 +78,7 @@ function Trabajadores() {
 
   // CANCELAR LA EDICIÓN
   function cancelarEdicion() {
+    setMostrarFormulario(false);
     setEditandoId(null);
     setFormulario(formularioVacio);
     setError("");
@@ -121,6 +126,7 @@ function Trabajadores() {
 
       setFormulario(formularioVacio);
       setEditandoId(null);
+      setMostrarFormulario(false);
 
       setMensaje(
         esEdicion
@@ -180,10 +186,17 @@ function Trabajadores() {
     }
   }
 
+  const filtrados = trabajadores.filter(t =>
+    (estado === "Todos" || t.estado === estado) &&
+    `${t.nombre} ${t.apellido} ${t.rut || ""}`.toLocaleLowerCase("es").includes(busqueda.toLocaleLowerCase("es"))
+  );
   return (
     <>
+      <div className="page-heading"><div><span className="eyebrow">EQUIPO DE TRABAJO</span><h1>Trabajadores</h1><p>Administra el personal y mantén sus datos al día.</p></div>{usuario?.rol !== "consulta" && !mostrarFormulario && <button onClick={() => { cancelarEdicion(); setMostrarFormulario(true); }}>+ Agregar trabajador</button>}</div>
+      {mensaje && <p className="mensaje" role="status">{mensaje}</p>}
+      {error && <p className="error" role="alert">{error}</p>}
       {/* FORMULARIO */}
-      <section className="formulario-seccion">
+      {mostrarFormulario && <section className="formulario-seccion">
         <h2>
           {editandoId !== null
             ? "Editar trabajador"
@@ -246,7 +259,7 @@ function Trabajadores() {
                   : "Registrar trabajador"}
             </button>
 
-            {editandoId !== null && (
+            {mostrarFormulario && (
               <button
                 type="button"
                 className="boton-cancelar"
@@ -259,14 +272,11 @@ function Trabajadores() {
           </div>
         </form>
 
-        {mensaje && <p className="mensaje">{mensaje}</p>}
-        {error && <p className="error">{error}</p>}
-      </section>
+      </section>}
 
       {/* TABLA DE TRABAJADORES */}
-      <section className="trabajadores-seccion">
-        <h2>Gestión de trabajadores</h2>
-        <p>Trabajadores registrados en el sistema.</p>
+      <section className="trabajadores-seccion panel">
+        <div className="tabla-toolbar"><label className="campo">Buscar trabajador<input type="search" placeholder="Nombre, apellido o RUT" value={busqueda} onChange={e => setBusqueda(e.target.value)} /></label><label className="campo">Estado<select value={estado} onChange={e => setEstado(e.target.value)}><option>Todos</option><option>Activo</option><option>Inactivo</option></select></label><span>{filtrados.length} de {trabajadores.length} trabajadores</span></div>
 
         {cargando ? (
           <p>Cargando trabajadores...</p>
@@ -285,7 +295,7 @@ function Trabajadores() {
               </thead>
 
               <tbody>
-                {trabajadores.map((trabajador) => (
+                {filtrados.map((trabajador) => (
                   <tr key={trabajador.id}>
                     <td>{trabajador.id}</td>
                     <td>{trabajador.nombre}</td>
@@ -335,8 +345,8 @@ function Trabajadores() {
               </tbody>
             </table>
 
-            {trabajadores.length === 0 && (
-              <p>No hay trabajadores registrados.</p>
+            {filtrados.length === 0 && (
+              <p className="empty-table">No hay trabajadores que coincidan con esta búsqueda.</p>
             )}
           </div>
         )}

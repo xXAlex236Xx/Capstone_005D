@@ -1,0 +1,19 @@
+.faenas-vista .page-heading > button { display: inline-flex; align-items: center; gap: 9px; }
+.faenas-indicadores { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 18px; margin: 22px 0 12px; }
+.faenas-indicadores > div { padding: 23px; border: 1px solid #e5eae1; border-radius: 12px; background: #fff; min-width: 0; }
+.faenas-indicadores span { display: block; color: #7b887b; font-size: 11px; line-height: 1.5; }
+.faenas-indicadores strong { display: block; font-size: clamp(18px,2.1vw,29px); color: #314f37; margin-top: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.faenas-indicadores small { font-size: 13px; font-weight: 400; }
+.faena-aclaracion { color: #7d897b; font-size: 11px; line-height: 1.7; margin: 13px 0 24px; }
+.faena-formulario,.faena-detalle { padding: 25px; margin: 20px 0; }
+.faena-formulario .campos { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.faena-formulario input[readonly],.faena-formulario select:disabled { background: #f4f6f1; color: #6b7968; }
+.faena-formulario textarea { width: 100%; resize: vertical; border: 1px solid #dce4d6; border-radius: 7px; padding: 12px; font: inherit; color: #435640; box-sizing: border-box; }
+.faena-form-acciones { display: flex; justify-content: flex-end; margin-top: 20px; }
+.faena-buscador { flex: 1; max-width: 410px; min-width: 180px; }
+.faena-estado { display: inline-block; padding: 5px 9px; border-radius: 6px; font-size: 10px; white-space: nowrap; background: #eef1eb; color: #6b7765; }
+.faena-estado.activa { background: #e9f3e5; color: #427442; }.faena-estado.planificada { background: #faf1df; color: #9a792e; }
+.faena-resumen { display: flex; flex-wrap: wrap; gap: 12px 25px; padding: 20px 0 5px; color: #436443; font-size: 13px; }
+.faenas-vista .tabla-contenedor table { min-width: 800px; }
+@media(max-width:1100px) { .faenas-indicadores { grid-template-columns: repeat(2,minmax(0,1fr)); }.faena-formulario .campos { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:600px) { .faenas-indicadores { gap: 10px; }.faenas-indicadores > div { padding: 16px; }.faena-formulario,.faena-detalle { padding: 18px; }.faena-formulario .campos { grid-template-columns: minmax(0,1fr); }.faenas-vista .page-heading { flex-wrap: wrap; }.faenas-vista .tabla-toolbar { flex-wrap: wrap; }.faenas-vista .page-heading > button { width: 100%; justify-content: center; } }

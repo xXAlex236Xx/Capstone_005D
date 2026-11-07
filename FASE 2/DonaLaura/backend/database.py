@@ -15,6 +15,7 @@ load_dotenv(BASE_DIR / ".env", override=True)
 
 def conectar_bd():
     return psycopg.connect(
+        connect_timeout=5,
         host=os.getenv("DB_HOST"),
         port=os.getenv("DB_PORT"),
         dbname=os.getenv("DB_NAME"),

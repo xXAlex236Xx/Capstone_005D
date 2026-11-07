@@ -2,10 +2,10 @@
 import { useEffect, useState } from "react";
 import "./Administracion.css";
 
-const API = "http://127.0.0.1:8000";
+import { API, apiFetch as fetch } from "./api";
 const JORNADAS_POR_PAGINA = 10;
 
-function Administracion() {
+function Administracion({ usuario }) {
   const [jornadas, setJornadas] = useState([]);
   const [sectores, setSectores] = useState([]);
   const [labores, setLabores] = useState([]);
@@ -178,7 +178,7 @@ function Administracion() {
       <div className="administracion-grid">
         {/* JORNADAS */}
         <article className="administracion-tarjeta">
-          <h3>📅 Jornadas</h3>
+          <h3>Jornadas</h3>
 
           <form onSubmit={crearJornada}>
             <label htmlFor="nueva-fecha">Fecha</label>
@@ -203,7 +203,7 @@ function Administracion() {
               rows={3}
             />
 
-            <button type="submit" disabled={guardando}>
+            <button type="submit" disabled={usuario?.rol === "consulta" || guardando}>
               Crear jornada
             </button>
           </form>
@@ -253,7 +253,7 @@ function Administracion() {
                 key={jornada.id}
                 className="administracion-item"
               >
-                📅 {jornada.fecha}
+                {jornada.fecha}
               </div>
             ))}
 
@@ -295,7 +295,7 @@ function Administracion() {
 
         {/* SECTORES */}
         <article className="administracion-tarjeta">
-          <h3>🌱 Sectores</h3>
+          <h3>Sectores</h3>
 
           <form onSubmit={crearSector}>
             <label htmlFor="nuevo-sector">
@@ -325,7 +325,7 @@ function Administracion() {
               rows={3}
             />
 
-            <button type="submit" disabled={guardando}>
+            <button type="submit" disabled={usuario?.rol === "consulta" || guardando}>
               Crear sector
             </button>
           </form>
@@ -348,7 +348,7 @@ function Administracion() {
 
         {/* LABORES */}
         <article className="administracion-tarjeta">
-          <h3>🧑‍🌾 Labores</h3>
+          <h3>‍Labores</h3>
 
           <form onSubmit={crearLabor}>
             <label htmlFor="nueva-labor">
@@ -378,7 +378,7 @@ function Administracion() {
               rows={3}
             />
 
-            <button type="submit" disabled={guardando}>
+            <button type="submit" disabled={usuario?.rol === "consulta" || guardando}>
               Crear labor
             </button>
           </form>

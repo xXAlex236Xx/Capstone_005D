@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "./Pagos.css";
 
-const API_URL = "http://127.0.0.1:8000";
+import { API as API_URL, apiFetch as fetch } from "./api";
 
 function hoyISO() {
   const hoy = new Date();
@@ -32,8 +32,11 @@ async function leerError(respuesta, mensajePorDefecto) {
   }
 }
 
-function Pagos() {
-  const [fecha, setFecha] = useState(hoyISO());
+function Pagos({ usuario }) {
+  const [fecha, setFecha] = useState(() => {
+    const indicada = new URLSearchParams(window.location.hash.split("?")[1] || "").get("fecha");
+    return indicada && /^\d{4}-\d{2}-\d{2}$/.test(indicada) ? indicada : hoyISO();
+  });
   const [detalle, setDetalle] = useState(null);
   const [historial, setHistorial] = useState([]);
   const [precio, setPrecio] = useState("");
@@ -56,13 +59,13 @@ function Pagos() {
     }
   }
 
-  async function cargarSemana(fechaConsulta) {
+  async function cargarSemana(fechaConsulta, signal) {
     setCargando(true);
     setError("");
 
     try {
       const respuesta = await fetch(
-        `${API_URL}/pagos/semana?fecha=${fechaConsulta}`
+        `${API_URL}/pagos/semana?fecha=${fechaConsulta}`, { signal }
       );
 
       if (!respuesta.ok) {
@@ -72,13 +75,15 @@ function Pagos() {
       }
 
       const datos = await respuesta.json();
+      if (signal?.aborted) return;
       setDetalle(datos);
       setPrecio(datos.precio_kg !== null ? String(datos.precio_kg) : "");
     } catch (errorCapturado) {
+      if (signal?.aborted) return;
       setError(errorCapturado.message);
       setDetalle(null);
     } finally {
-      setCargando(false);
+      if (!signal?.aborted) setCargando(false);
     }
   }
 
@@ -87,10 +92,14 @@ function Pagos() {
   }, []);
 
   useEffect(() => {
+    const controlador = new AbortController();
     if (fecha) {
       setMensaje("");
-      cargarSemana(fecha);
+      cargarSemana(fecha, controlador.signal);
+    } else {
+      setDetalle(null);
     }
+    return () => controlador.abort();
   }, [fecha]);
 
   async function guardarTarifa(evento) {
@@ -180,7 +189,7 @@ function Pagos() {
   return (
     <section className="pagos-seccion">
       <div className="pagos-encabezado">
-        <h2>💰 Pagos semanales</h2>
+        <h2>Pagos semanales</h2>
         <p>
           Define el precio por kilo de la semana (lunes a domingo), revisa
           cuánto corresponde pagar a cada trabajador y cierra la semana.
@@ -194,6 +203,7 @@ function Pagos() {
             id="pagos-fecha"
             type="date"
             value={fecha}
+            disabled={guardando}
             onChange={(evento) => setFecha(evento.target.value)}
           />
         </div>
@@ -208,14 +218,14 @@ function Pagos() {
               step="0.01"
               value={precio}
               onChange={(evento) => setPrecio(evento.target.value)}
-              disabled={guardando || (detalle && detalle.cerrada)}
+              disabled={usuario?.rol !== "administrador" || guardando || (detalle && detalle.cerrada)}
               placeholder="Ej.: 80"
             />
           </div>
 
           <button
             type="submit"
-            disabled={guardando || !detalle || detalle.cerrada}
+            disabled={usuario?.rol !== "administrador" || guardando || !detalle || detalle.cerrada}
           >
             Guardar tarifa
           </button>
@@ -316,7 +326,7 @@ function Pagos() {
               <button
                 type="button"
                 onClick={cerrarSemana}
-                disabled={guardando || sinTarifa || sinProduccion}
+                disabled={usuario?.rol !== "administrador" || guardando || sinTarifa || sinProduccion}
               >
                 Cerrar semana
               </button>

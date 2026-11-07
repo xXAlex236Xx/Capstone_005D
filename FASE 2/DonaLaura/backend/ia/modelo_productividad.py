@@ -12,9 +12,10 @@ from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from dotenv import load_dotenv
+from database import conectar_bd
 
 BASE_DIR = Path(__file__).resolve().parent
-load_dotenv(BASE_DIR.parent / ".env", override=True)
+load_dotenv(BASE_DIR.parent / ".env", override=False)
 
 # Si DATASET_PATH está en el .env se usa ese archivo (datos reales);
 # si no, el CSV de ejemplo con trabajadores anonimizados incluido en el repo.
@@ -25,7 +26,24 @@ MIN_REGISTROS_PREDICCION = 5
 RANDOM_STATE = 42
 
 
-def _cargar_dataset() -> pd.DataFrame:
+def _cargar_dataset(fuente="operacion") -> pd.DataFrame:
+    if fuente == "operacion":
+        with conectar_bd() as conexion:
+            filas = conexion.execute("""
+                SELECT CONCAT(t.nombre, ' ', t.apellido, ' · #', t.id_trabajador),
+                       j.fecha, SUM(p.cantidad_kg)
+                FROM produccion p JOIN trabajadores t USING(id_trabajador)
+                JOIN jornadas j USING(id_jornada) JOIN labores l USING(id_labor)
+                WHERE l.nombre ILIKE 'Cosecha%'
+                GROUP BY t.id_trabajador,t.nombre,t.apellido,j.fecha
+                ORDER BY j.fecha,t.id_trabajador
+            """).fetchall()
+        datos = pd.DataFrame(filas, columns=["trabajador", "fecha", "kilos"])
+        datos["fecha"] = pd.to_datetime(datos["fecha"])
+        datos["kilos"] = pd.to_numeric(datos["kilos"])
+        return datos[datos["kilos"] > 0].reset_index(drop=True)
+    if fuente != "historico":
+        raise ValueError("Fuente de análisis desconocida")
     if not DATASET.exists():
         raise FileNotFoundError(
             "No se encontró el dataset histórico de cosecha de paltas."
@@ -42,18 +60,25 @@ def _cargar_dataset() -> pd.DataFrame:
         .str.replace(r"\s+", " ", regex=True)
         .str.strip()
     )
+    # Un trabajador puede tener varias filas por sector en una misma jornada.
+    agregaciones = {"kilos": "sum"}
+    if "fecha_corregida" in datos.columns:
+        agregaciones["fecha_corregida"] = "max"
+    datos = datos.groupby(["fecha", "trabajador"], as_index=False).agg(agregaciones)
     return datos.sort_values(["fecha", "trabajador"]).reset_index(drop=True)
 
 
 def _calcular_tendencia(grupo: pd.DataFrame) -> float:
-    grupo = grupo.sort_values("fecha")
+    # Cambio ajustado en las últimas 20 jornadas observadas, no pendiente
+    # diaria sobre dos años (que diluía cambios recientes casi a cero).
+    grupo = grupo.sort_values("fecha").tail(20)
     y = grupo["kilos"].to_numpy(dtype=float)
     if len(y) < 2 or float(np.mean(y)) == 0:
         return 0.0
 
     x = np.arange(len(y), dtype=float)
     pendiente = float(np.polyfit(x, y, 1)[0])
-    return (pendiente / float(np.mean(y))) * 100.0
+    return (pendiente * (len(y) - 1) / float(np.mean(y))) * 100.0
 
 
 def _nombre_grupo(centro: pd.Series, centros: pd.DataFrame) -> str:
@@ -154,6 +179,9 @@ def _resumen_trabajadores(datos: pd.DataFrame) -> pd.DataFrame:
         ["Al alza", "A la baja"],
         default="Estable",
     )
+    insuficientes = resumen["dias_trabajados"] < MIN_DIAS_CLUSTER
+    resumen.loc[insuficientes, "tendencia"] = "Datos insuficientes"
+    resumen.loc[insuficientes, "tendencia_pct"] = 0.0
 
     resumen["recomendacion"] = resumen.apply(
         lambda fila: _recomendacion(
@@ -248,11 +276,12 @@ def _entrenar_prediccion(datos: pd.DataFrame) -> tuple[dict, dict[str, float | N
     if len(base) < 30:
         return vacio, {}
 
-    # Último registro disponible de cada trabajador como prueba. Así evaluamos
-    # contra información posterior a la usada para entrenar ese mismo historial.
-    indices_prueba = base.groupby("trabajador")["fecha"].idxmax().tolist()
-    prueba = base.loc[indices_prueba].copy()
-    entrenamiento = base.drop(indices_prueba).copy()
+    # Corte global por fecha: ningún trabajador aporta al entrenamiento datos
+    # posteriores al inicio de la evaluación.
+    fechas = sorted(base["fecha"].unique())
+    corte = fechas[max(1, int(len(fechas) * 0.8))] if len(fechas) > 1 else fechas[0]
+    prueba = base[base["fecha"] >= corte].copy()
+    entrenamiento = base[base["fecha"] < corte].copy()
 
     if len(entrenamiento) < 20 or len(prueba) < 5:
         return vacio, {}
@@ -292,6 +321,7 @@ def _entrenar_prediccion(datos: pd.DataFrame) -> tuple[dict, dict[str, float | N
     modelo.fit(entrenamiento[columnas], entrenamiento["kilos_objetivo"])
     pred_prueba = modelo.predict(prueba[columnas])
     mae = float(mean_absolute_error(prueba["kilos_objetivo"], pred_prueba))
+    mae_base = float(mean_absolute_error(prueba["kilos_objetivo"], prueba["media_3"]))
     r2 = float(r2_score(prueba["kilos_objetivo"], pred_prueba)) if len(prueba) >= 2 else None
 
     # Reentrenar con toda la información disponible para estimar la próxima jornada.
@@ -328,16 +358,34 @@ def _entrenar_prediccion(datos: pd.DataFrame) -> tuple[dict, dict[str, float | N
             "Random Forest estima los kilos de la próxima jornada usando el historial reciente "
             "del trabajador. La predicción es orientativa y debe mejorar al incorporar más datos."
         ),
-        "registros_entrenamiento": int(len(base)),
+        "registros_entrenamiento": int(len(entrenamiento)),
         "registros_prueba": int(len(prueba)),
         "mae_kg": round(mae, 2),
         "r2": round(r2, 3) if r2 is not None else None,
+        "mae_referencia_kg": round(mae_base, 2),
+        "mejora_referencia": mae < mae_base,
+        "evaluacion": "Corte temporal global 80/20; referencia: media de las tres jornadas anteriores",
+        "fecha_corte": pd.Timestamp(corte).date().isoformat(),
     }
     return metricas, predicciones
 
 
-def generar_analisis() -> dict:
-    datos = _cargar_dataset()
+def generar_analisis(fuente="operacion") -> dict:
+    datos = _cargar_dataset(fuente)
+    if datos.empty:
+        return {
+            "version": "IA v2", "fuente": fuente,
+            "metodo": "K-Means + Isolation Forest + Random Forest",
+            "descripcion": "Aún no hay producción de cosecha suficiente en esta fuente.",
+            "periodo": {"desde": None, "hasta": None},
+            "registros_historicos": 0, "trabajadores_historicos": 0,
+            "trabajadores_analizados_ia": 0, "trabajadores_con_prediccion": 0,
+            "minimo_dias_para_ia": MIN_DIAS_CLUSTER,
+            "minimo_registros_prediccion": MIN_REGISTROS_PREDICCION,
+            "modelo_predictivo": {"entrenado": False, "mae_kg": None, "r2": None},
+            "fechas_corregidas": 0, "trabajadores": [], "registros_atipicos": [],
+            "advertencias": ["Registra cosechas o selecciona el histórico de ejemplo para explorar el análisis."],
+        }
     resumen = _resumen_trabajadores(datos)
     atipicos = _detectar_atipicos(datos)
     modelo_predictivo, predicciones = _entrenar_prediccion(datos)
@@ -360,6 +408,7 @@ def generar_analisis() -> dict:
                 "mediana_kg": round(float(fila["mediana_kg"]), 2),
                 "variabilidad_pct": round(float(fila["coef_variacion"]) * 100, 1),
                 "tendencia_pct": round(float(fila["tendencia_pct"]), 2),
+                "tendencia_metodo": "Cambio de la recta ajustada entre inicio y fin de las últimas 20 jornadas disponibles (o menos), dividido por su promedio de kg/día. No ajusta por horas ni condiciones.",
                 "tendencia": str(fila["tendencia"]),
                 "ultimo_kg": round(float(fila["ultimo_kg"]), 2),
                 "ultimo_registro": fila["ultimo_registro"].date().isoformat(),
@@ -375,7 +424,8 @@ def generar_analisis() -> dict:
     )
 
     return {
-        "version": "IA v1.1",
+        "version": "IA v2",
+        "fuente": fuente,
         "metodo": "K-Means + Isolation Forest + Random Forest",
         "descripcion": (
             "K-Means agrupa patrones de producción, Isolation Forest marca registros inusuales "
@@ -394,10 +444,12 @@ def generar_analisis() -> dict:
         "modelo_predictivo": modelo_predictivo,
         "fechas_corregidas": corregidas,
         "advertencias": [
-            "El modelo usa solo planillas identificadas como Cosecha Paltas de las semanas 31 a 40.",
-            "Anillado y cosecha de limón se excluyeron porque corresponden a actividades o unidades distintas.",
+            ("Fuente: producción registrada en PostgreSQL, agrupada por trabajador y fecha; labores cuyo nombre comienza con Cosecha."
+             if fuente == "operacion" else "Fuente: CSV histórico de ejemplo, separado de la operación actual."),
+            "Compara jornadas considerando horas, sector, cultivo y condiciones; los kilos diarios no describen por sí solos el desempeño.",
+            "La tendencia estima el cambio dentro de las últimas 20 jornadas disponibles de cada trabajador; revisa su última fecha, especialmente en trabajadores inactivos.",
             "Las estimaciones son apoyo para análisis; no deben usarse por sí solas para decisiones laborales.",
-            "La predicción utiliza pocos meses de historia y debe reentrenarse al incorporar nuevas semanas.",
+            "La fiabilidad depende de la cantidad y representatividad de las jornadas disponibles; el análisis se recalcula al actualizar.",
         ],
         "trabajadores": trabajadores,
         "registros_atipicos": atipicos,

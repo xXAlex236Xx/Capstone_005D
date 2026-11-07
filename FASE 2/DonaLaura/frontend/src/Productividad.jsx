@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import "./Productividad.css";
 
-const API_URL = "http://127.0.0.1:8000";
+import { API as API_URL, apiFetch as fetch } from "./api";
 
 const filtrosIniciales = {
   fecha_inicio: "",
@@ -129,7 +129,7 @@ function Productividad() {
     <section className="productividad-seccion">
       <div className="productividad-encabezado">
         <div>
-          <h2>📊 Dashboard de productividad</h2>
+          <h2>Dashboard de productividad</h2>
           <p>Analiza la producción por fecha, sector y labor.</p>
         </div>
       </div>

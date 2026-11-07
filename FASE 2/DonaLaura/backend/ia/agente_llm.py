@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 from ia.herramientas import ejecutar_herramienta
+from entorno import describir_entorno
 
 
 # =====================================================
@@ -46,10 +47,15 @@ REGLAS IMPORTANTES:
 
 4. Diferencia claramente dos fuentes:
    - PostgreSQL: información operativa registrada en el sistema.
-   - Histórico Excel + IA: información histórica usada por los modelos.
+   - Análisis IA: por defecto usa producción actual de PostgreSQL, agrupada por jornada.
+     El CSV histórico de ejemplo solo se usa al seleccionarlo explícitamente en la pantalla de análisis.
 
 5. Puedes dar opiniones, conclusiones y recomendaciones, pero siempre
    explica brevemente qué datos sustentan esa opinión.
+   Respeta el alcance de cada cifra: el bloque postgreSQL del resumen incluye
+   todas las labores y filas por sector; el bloque historico_ia incluye solo
+   Cosecha agrupada por trabajador y fecha. No atribuyas a un total el filtro
+   del otro bloque, ni confundas filas de producción con jornadas.
 
 6. Si los datos no son suficientes, dilo directamente.
 
@@ -96,6 +102,14 @@ Usa las herramientas y luego interpreta los resultados.
 # =====================================================
 
 TOOLS = [
+    {
+        "type": "function",
+        "name": "consultar_gestion",
+        "description": "Consulta de solo lectura: clientes, faenas activas, kilos por mes y cliente, cobro estimado al cliente y pagos brutos/abonos/saldos de trabajadores. Incluye cartera actual por cliente: montos confirmados, abonos anotados como recibidos, saldos y vencimientos; no verifica bancos ni calcula utilidades. Acepta período opcional; omitirlo consulta toda la producción. Indica si los datos son ficticios de demostración.",
+        "parameters": {"type":"object","properties":{
+            "fecha_desde":{"type":["string","null"],"description":"Inicio inclusive YYYY-MM-DD, o null"},
+            "fecha_hasta":{"type":["string","null"],"description":"Fin inclusive YYYY-MM-DD, o null"}},"additionalProperties":False}
+    },
     {
         "type": "function",
         "name": "resumen_empresa",
@@ -363,7 +377,9 @@ def responder_agente(
         )
 
     cliente = OpenAI(
-        api_key=api_key
+        api_key=api_key,
+        timeout=30,
+        max_retries=1,
     )
 
     input_items = preparar_historial(
@@ -372,11 +388,15 @@ def responder_agente(
     )
 
     herramientas_usadas = []
+    entorno = describir_entorno()
+    instrucciones = INSTRUCCIONES + "\nPara clientes, faenas, cobros estimados y pagos registrados usa consultar_gestion. Distingue venta estimada de cobro recibido y de utilidad. Respeta el período y los límites que informa la herramienta."
+    if entorno.get("demostracion"):
+        instrucciones += f"\nENTORNO ACTUAL: DEMOSTRACIÓN. Los datos de PostgreSQL son sintéticos, del {entorno['desde']} al {entorno['hasta']}. Indica brevemente al inicio de tus respuestas que analizas datos ficticios de prueba, sin presentarlos como resultados reales de Doña Laura. No prometas que estos modelos sintéticos prueben precisión con datos reales."
 
     try:
         respuesta = cliente.responses.create(
             model=MODELO,
-            instructions=INSTRUCCIONES,
+            instructions=instrucciones,
             tools=TOOLS,
             tool_choice="auto",
             input=input_items,
@@ -444,7 +464,7 @@ def responder_agente(
 
             respuesta = cliente.responses.create(
                 model=MODELO,
-                instructions=INSTRUCCIONES,
+                instructions=instrucciones,
                 tools=TOOLS,
                 tool_choice="auto",
                 input=input_items,
@@ -467,8 +487,7 @@ def responder_agente(
     except Exception as error:
         print(
             "ERROR OPENAI AGENTE:",
-            type(error).__name__,
-            error
+            type(error).__name__
         )
 
         # Si falla la API, mantenemos vivo el chatbot antiguo.

@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import "./Importacion.css";
 
-const API = "http://127.0.0.1:8000";
+import { API, apiFetch as fetch } from "./api";
 const nuevaFila = () => ({ id: crypto.randomUUID(), id_sector: "", kilos: "", horas: "" });
 const numero = (valor) => Number(valor);
 const formato = (valor) => Number(valor).toLocaleString("es-CL", { maximumFractionDigits: 2 });
 
-export default function Importacion() {
+export default function Importacion({ usuario }) {
   const [archivo1, setArchivo1] = useState(null);
   const [archivo2, setArchivo2] = useState(null);
   const [resultado, setResultado] = useState(null);
@@ -336,7 +336,7 @@ export default function Importacion() {
             </div>}
             {validacion?.listos > 0 && !guardado && (
               <button type="button" className="importacion-agregar-sector"
-                disabled={guardando || validando} onClick={guardarCosechas}>
+                disabled={usuario?.rol === "consulta" || guardando || validando} onClick={guardarCosechas}>
                 {guardando ? "Guardando..." : `Guardar ${validacion.listos} cosechas validadas`}
               </button>
             )}

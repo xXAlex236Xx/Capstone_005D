@@ -1,9 +1,9 @@
 from difflib import SequenceMatcher
-from functools import lru_cache
 import unicodedata
 
 from database import conectar_bd
 from ia.modelo_productividad import generar_analisis
+from ia.gestion import consultar_gestion
 
 
 # =====================================================
@@ -20,7 +20,6 @@ def normalizar(texto: str) -> str:
     )
 
 
-@lru_cache(maxsize=1)
 def obtener_analisis_historico():
     return generar_analisis()
 
@@ -98,6 +97,7 @@ def trabajador_compacto(trabajador):
 
         "tendencia_pct":
             trabajador.get("tendencia_pct"),
+        "tendencia_metodo": trabajador.get("tendencia_metodo"),
 
         "ultimo_kg":
             trabajador.get("ultimo_kg"),
@@ -201,6 +201,10 @@ def resumen_empresa():
         }
 
     return {
+        "alcance": {
+            "postgreSQL": "Todos los registros de producción, sin filtro de labor; cada fila puede corresponder a un sector.",
+            "historico_ia": "Solo labores cuyo nombre comienza con Cosecha, agrupadas por trabajador y fecha; fuente PostgreSQL.",
+        },
         "postgreSQL": resultado_bd,
 
         "historico_ia": {
@@ -346,7 +350,7 @@ def analizar_trabajador(nombre: str):
 
     return {
         "encontrado": True,
-        "fuente": "Histórico Excel + IA",
+        "fuente": "Producción registrada en PostgreSQL + IA",
 
         "datos":
             trabajador_compacto(
@@ -391,7 +395,7 @@ def comparar_trabajadores(
 
     return {
         "fuente":
-            "Histórico Excel + IA",
+            "Producción registrada en PostgreSQL + IA",
 
         "comparacion":
             resultados
@@ -911,6 +915,7 @@ def estado_modelo_ia():
 # =====================================================
 
 HERRAMIENTAS_PYTHON = {
+    "consultar_gestion": consultar_gestion,
     "resumen_empresa":
         resumen_empresa,
 

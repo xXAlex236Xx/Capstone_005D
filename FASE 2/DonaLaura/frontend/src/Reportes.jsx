@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "./Reportes.css";
 
-const API_URL = "http://127.0.0.1:8000";
+import { API as API_URL, apiFetch as fetch } from "./api";
 
 const FAMILIAS = {
   produccion: {
@@ -199,7 +199,7 @@ function Reportes() {
   return (
     <section className="reportes-seccion">
       <div className="reportes-encabezado">
-        <h2>📄 Reportes</h2>
+        <h2>Reportes</h2>
         <p>
           Genera reportes de producción y pagos, descárgalos en Excel (CSV) o
           imprímelos / guárdalos como PDF.
