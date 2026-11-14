@@ -287,6 +287,8 @@ def test_mi_dia_y_plantilla_requieren_sesion_y_permiten_consulta(actor):
 
 @pytest.fixture(scope="module")
 def base_temporal():
+    if os.getenv("DATABASE_URL"):
+        pytest.fail("Quita DATABASE_URL antes de ejecutar las pruebas locales de PostgreSQL.")
     nombre = "agricolix_test_" + uuid4().hex[:12]
     original = os.environ.get("DB_NAME")
     parametros = dict(host=os.getenv("DB_HOST"), port=os.getenv("DB_PORT"), dbname="postgres",

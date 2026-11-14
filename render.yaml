@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: agricolix-dona-laura
+    runtime: docker
+    plan: 1c-2g
+    region: oregon
+    dockerContext: ./FASE 2/DonaLaura
+    dockerfilePath: ./FASE 2/DonaLaura/Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: agricolix-dona-laura-db
+          property: connectionString
+      - key: AGRICOLIX_CLAVE_INICIAL
+        sync: false
+
+databases:
+  - name: agricolix-dona-laura-db
+    plan: 0.1c-256mb
+    region: oregon
+    ipAllowList: []

@@ -98,7 +98,7 @@ export default function App() {
         {SECCIONES.map(({id,Vista,persistente,admin}) => {
           const visible = id === seccion.id;
           if ((admin && usuario.rol !== "administrador") || (!visible && !(persistente && visitadas.has(id)))) return null;
-          return <div className="vista-contenido" key={`${id}:${version}`} hidden={!visible}><Vista usuario={usuario} /></div>;
+          return <div className="vista-contenido" key={`${id}:${version}`} hidden={!visible}><Vista usuario={usuario} entorno={entorno} /></div>;
         })}
       </main><footer className="app-footer"><span>agricolix · Doña Laura SpA</span><span>Gestión basada en tus registros</span></footer>
     </div>

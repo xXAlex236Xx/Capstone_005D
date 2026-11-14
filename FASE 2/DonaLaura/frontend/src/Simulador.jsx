@@ -31,18 +31,21 @@ function Sensibilidad({ valores, factor }) {
   </svg>;
 }
 
-export default function Simulador() {
-  const [valores, setValores] = useState({ ...EJEMPLO });
+export default function Simulador({ entorno }) {
+  const mostrarEjemplos = entorno?.ejemplos_disponibles === true;
+  const [valores, setValores] = useState(() =>
+    mostrarEjemplos ? { ...EJEMPLO } : Object.fromEntries(campos.map(([clave]) => [clave, ""]))
+  );
   const [volumen, setVolumen] = useState(100);
   const [nombre, setNombre] = useState("Nueva oportunidad de cosecha");
-  const [ejemplo, setEjemplo] = useState(true);
+  const [ejemplo, setEjemplo] = useState(mostrarEjemplos);
   const resultado = evaluarContrato(valores, volumen / 100);
   const bajo = evaluarContrato(valores, .8);
   const decision = !resultado ? "Completa los supuestos" : resultado.ingreso === 0 ? "El escenario no genera ingresos" : resultado.margen < 0 ? "El escenario proyecta una pérdida" : resultado.porcentaje < Number(valores.objetivo) ? "Hay margen, pero falta llegar a tu objetivo" : "El escenario alcanza tu margen objetivo";
   function cambiar(k, v) { setValores(s => ({ ...s, [k]: v })); setEjemplo(false); }
   function reiniciar() { setValores({ ...EJEMPLO }); setVolumen(100); setEjemplo(true); setNombre("Nueva oportunidad de cosecha"); }
   return <section className="simulador-vista">
-    <div className="page-heading"><div><span className="eyebrow">DECISIONES ANTES DEL CONTRATO</span><h1>¿Conviene aceptar esta faena?</h1><p>Prueba una oferta, anticipa el riesgo y encuentra el precio que necesitas negociar.</p></div><button className="boton-secundario" onClick={reiniciar}><Icon nombre="actualizar" size={16}/> Cargar ejemplo</button></div>
+    <div className="page-heading"><div><span className="eyebrow">DECISIONES ANTES DEL CONTRATO</span><h1>¿Conviene aceptar esta faena?</h1><p>Prueba una oferta, anticipa el riesgo y encuentra el precio que necesitas negociar.</p></div>{mostrarEjemplos && <button className="boton-secundario" onClick={reiniciar}><Icon nombre="actualizar" size={16}/> Cargar ejemplo</button>}</div>
     <div className="sim-aviso"><Icon nombre="simulador" size={18}/><span><strong>{ejemplo ? "Ejemplo hipotético para explorar" : "Simulación con tus supuestos"}</strong> · No modifica faenas, tarifas ni pagos. Valores netos en CLP, antes de impuestos.</span></div>
     <div className="sim-layout">
       <div className="sim-form panel"><div className="sim-panel-title"><span className="sim-step">01</span><div><h2>Construye la oferta</h2><p>Estos valores son editables; no se toman del historial.</p></div></div>

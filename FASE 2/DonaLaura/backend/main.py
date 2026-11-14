@@ -24,7 +24,7 @@ from importador import leer_planilla
 
 
 from database import conectar_bd, BASE_DIR
-from seguridad import ControlAcceso, router as router_acceso
+from seguridad import ControlAcceso, ORIGENES, router as router_acceso
 from resumen import router as router_resumen
 from operacion import router as router_operacion
 from seguimiento import router as router_seguimiento
@@ -58,7 +58,8 @@ app = FastAPI(
 
     version="0.1.0",
 
-    lifespan=ciclo_de_vida
+    lifespan=ciclo_de_vida,
+    openapi_url=None if os.getenv("AGRICOLIX_PRODUCCION") == "1" else "/openapi.json",
 
 )
 
@@ -71,13 +72,7 @@ app.add_middleware(
 
     CORSMiddleware,
 
-    allow_origins=[
-
-        "http://localhost:5173",
-
-        "http://127.0.0.1:5173"
-
-    ],
+    allow_origins=sorted(ORIGENES),
 
     allow_credentials=True,
 
@@ -1809,6 +1804,8 @@ def obtener_analisis_ia(fuente: Literal["operacion", "historico"] = "operacion")
     estimación orientativa para la próxima jornada. No toma decisiones laborales
     ni modifica registros de producción.
     """
+    if fuente == "historico" and os.getenv("AGRICOLIX_PRODUCCION") == "1":
+        raise HTTPException(404, "El histórico de ejemplo no está disponible.")
     try:
         from ia.modelo_productividad import generar_analisis
         return generar_analisis(fuente=fuente)

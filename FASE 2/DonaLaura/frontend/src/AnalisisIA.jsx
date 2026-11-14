@@ -20,13 +20,15 @@ function claseTendencia(tendencia) {
   return "ia-tendencia ia-estable";
 }
 
-function AnalisisIA() {
+function AnalisisIA({ entorno }) {
   const [analisis, setAnalisis] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [soloAnalizados, setSoloAnalizados] = useState(false);
-  const [fuente, setFuente] = useState("operacion");
+  const [fuenteElegida, setFuenteElegida] = useState("operacion");
+  const mostrarHistorico = entorno?.historico_disponible === true;
+  const fuente = mostrarHistorico ? fuenteElegida : "operacion";
 
   const cargarAnalisis = useCallback(async () => {
     setCargando(true);
@@ -81,12 +83,12 @@ function AnalisisIA() {
           </p>
         </div>
 
-        <label className="campo">Fuente de datos
-          <select value={fuente} onChange={e => setFuente(e.target.value)} disabled={cargando}>
+        {mostrarHistorico && <label className="campo">Fuente de datos
+          <select value={fuente} onChange={e => setFuenteElegida(e.target.value)} disabled={cargando}>
             <option value="operacion">Producción registrada</option>
             <option value="historico">Histórico de ejemplo · CSV</option>
           </select>
-        </label>
+        </label>}
         <button type="button" onClick={cargarAnalisis} disabled={cargando}>
           {cargando ? "Analizando..." : "Actualizar análisis"}
         </button>

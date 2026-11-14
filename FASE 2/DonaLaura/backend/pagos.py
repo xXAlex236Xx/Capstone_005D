@@ -2,6 +2,7 @@ import csv
 import io
 import asyncio
 import logging
+import os
 from contextlib import suppress
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
@@ -59,6 +60,11 @@ async def ciclo_de_vida(app):
     from seguridad import inicializar_seguridad
     crear_tablas_pagos()
     inicializar_seguridad()
+    if os.getenv("AGRICOLIX_PRODUCCION") == "1":
+        # El proveedor respalda la base administrada fuera del servidor web.
+        yield
+        return
+
     async def revisar_respaldos():
         from respaldo import crear_diario
         from starlette.concurrency import run_in_threadpool

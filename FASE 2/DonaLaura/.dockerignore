@@ -1,0 +1,10 @@
+**/.env
+**/.env.*
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/node_modules
+**/dist
+backend/tests
+backend/demo*.py
+backend/ia/*.csv

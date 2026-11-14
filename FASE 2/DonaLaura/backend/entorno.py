@@ -1,4 +1,6 @@
 """Identificación explícita de copias con datos sintéticos."""
+import os
+
 from fastapi import APIRouter
 from database import conectar_bd
 
@@ -18,4 +20,9 @@ def describir_entorno():
 
 @router.get("/entorno")
 def entorno_actual():
-    return describir_entorno()
+    produccion = os.getenv("AGRICOLIX_PRODUCCION") == "1"
+    return {
+        **describir_entorno(),
+        "historico_disponible": not produccion,
+        "ejemplos_disponibles": not produccion,
+    }

@@ -384,7 +384,7 @@ def generar_analisis(fuente="operacion") -> dict:
             "minimo_registros_prediccion": MIN_REGISTROS_PREDICCION,
             "modelo_predictivo": {"entrenado": False, "mae_kg": None, "r2": None},
             "fechas_corregidas": 0, "trabajadores": [], "registros_atipicos": [],
-            "advertencias": ["Registra cosechas o selecciona el histórico de ejemplo para explorar el análisis."],
+            "advertencias": ["Registra cosechas para comenzar a analizar la producción."],
         }
     resumen = _resumen_trabajadores(datos)
     atipicos = _detectar_atipicos(datos)

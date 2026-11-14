@@ -1,0 +1,16 @@
+{
+  "id": "/",
+  "name": "Agricolix · Doña Laura",
+  "short_name": "Agricolix",
+  "lang": "es-CL",
+  "description": "Gestión de cosechas, trabajadores y pagos de Doña Laura.",
+  "start_url": "/#inicio",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f7f3",
+  "theme_color": "#153528",
+  "icons": [
+    { "src": "/agricolix-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/agricolix-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

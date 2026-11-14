@@ -10,6 +10,7 @@ import psycopg
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from starlette._utils import get_route_path
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from database import conectar_bd
@@ -19,6 +20,9 @@ COOKIE = "agricolix_session"
 ITERACIONES = 600_000
 ROLES = {"administrador", "encargado", "consulta"}
 ORIGENES = {"http://127.0.0.1:5173", "http://localhost:5173"}
+ORIGEN_PUBLICO = os.getenv("AGRICOLIX_ORIGEN") or os.getenv("RENDER_EXTERNAL_URL")
+if ORIGEN_PUBLICO:
+    ORIGENES.add(ORIGEN_PUBLICO.rstrip("/"))
 logger = logging.getLogger("agricolix.acceso")
 
 
@@ -118,7 +122,7 @@ def nombre_operacion(metodo, ruta):
 
 class ControlAcceso(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        ruta = request.url.path
+        ruta = get_route_path(request.scope)
         if request.method == "OPTIONS" or ruta in {"/", "/health", "/auth/login", "/entorno"}:
             if request.method != "OPTIONS" and request.method not in {"GET", "HEAD"}:
                 origen = request.headers.get("origin")
