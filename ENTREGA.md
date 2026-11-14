@@ -13,6 +13,16 @@ La entrega usa una base PostgreSQL nueva. El primer arranque crea las tablas y l
 
 [Configurar un Blueprint en Render](https://render.com/docs/infrastructure-as-code) · [Precios de los planes](https://render.com/pricing) · [Respaldos y recuperación de PostgreSQL](https://render.com/docs/postgresql-backups)
 
+## Opción gratuita para una primera prueba
+
+1. Crea un proyecto nuevo en el plan **Free** de Neon y usa su conexión directa a PostgreSQL con TLS. Deja la base vacía para que Agricolix cree sus propias tablas.
+2. En **New → Blueprint** de Render selecciona la rama `codex/agricolix-entrega` y escribe `render-gratis.yaml` en **Blueprint Path**. Revisa que el panel indique **Free** para el servicio web. Este archivo crea solo ese servicio y se conecta a Neon.
+3. Pega la cadena de conexión de Neon en `DATABASE_URL` y elige la clave inicial del administrador en `AGRICOLIX_CLAVE_INICIAL`, ambas en el formulario privado de Render. Aplica el Blueprint, entra con `admin` y comprueba que cosechas, clientes y pagos estén vacíos. Después instala la app desde el enlace HTTPS que asigna Render.
+
+Render pone el servicio gratuito en pausa tras 15 minutos sin tráfico. La siguiente visita puede tardar cerca de un minuto. Neon conserva los datos por separado y su plan Free ofrece 1 GB por proyecto y una ventana de restauración de hasta 6 horas. Antes de usar el sistema para una temporada, prueba la capacidad y planifica respaldos fuera del proveedor. El servicio gratuito necesita una prueba de carga con un volumen representativo para validar el análisis de IA. El asistente conversacional de OpenAI es opcional y se cobra por uso si lo habilitas.
+
+[Límites de Render Free](https://render.com/docs/free) · [Plan Free de Neon](https://neon.com/docs/introduction/plans)
+
 ## Instalar en el dispositivo
 
 - **Windows.** Abre el enlace en Edge y usa el menú **Aplicaciones → Instalar este sitio como una aplicación**.

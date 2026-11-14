@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: agricolix-dona-laura-gratis
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerContext: ./FASE 2/DonaLaura
+    dockerfilePath: ./FASE 2/DonaLaura/Dockerfile
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: AGRICOLIX_CLAVE_INICIAL
+        sync: false
