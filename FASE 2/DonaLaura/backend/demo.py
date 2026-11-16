@@ -22,7 +22,7 @@ from database import BASE_DIR, conectar_bd
 from pagos import calcular_total, lunes_de
 from seguridad import hash_password, inicializar_seguridad
 
-LOCAL = BASE_DIR.parents[2] / ".local"
+LOCAL = Path(os.getenv("AGRICOLIX_LOCAL") or BASE_DIR.parents[2] / ".local")
 ESTADO = LOCAL / "demostracion.json"
 ACCESOS = LOCAL / "accesos-demostracion.txt"
 TABLAS_OPERACION = ("trabajadores", "jornadas", "produccion", "clientes", "faenas", "pagos", "tarifas", "abonos_pago")

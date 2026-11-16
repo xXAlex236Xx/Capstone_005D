@@ -4,7 +4,30 @@ Plataforma web para registrar trabajadores y cosechas, importar planillas,
 consultar productividad y preparar pagos semanales. Proyecto de título Capstone
 APT de Ingeniería en Informática, sede Viña del Mar.
 
-## Uso diario en Windows
+## Uso con Agricolix.exe (recomendado)
+
+`Agricolix.exe` es el lanzador pensado para quien solo quiere usar el sistema, sin
+instalar nada ni abrir una consola. Solo funciona en Windows 10 u 11 y necesita internet
+la primera vez.
+
+1. Abre **Agricolix.exe**. La primera vez descarga Python, PostgreSQL y las librerías
+   (cerca de 600 MB, varios minutos), ordena la carpeta del proyecto y prepara la base de datos.
+   Este orden **elimina de la carpeta los documentos del proyecto de título** (Fase 1, 2 y 3,
+   README y guías) y deja solo el exe y la carpeta `agricolix data`. Si algo falla antes de
+   eliminarlos, por ejemplo sin internet, no se borra nada.
+2. Al terminar pide crear la cuenta de acceso: cada persona elige su usuario y su
+   contraseña (mínimo 12 caracteres). También permite guardar la clave de OpenAI del
+   asistente; es opcional y se puede cambiar después con el botón **Clave de OpenAI**.
+3. **Iniciar sistema** enciende todo y abre el navegador. **Apagar sistema** lo detiene sin
+   borrar datos.
+
+Para desarrolladores: el botón **Restaurar (solo desarrolladores)** apaga el sistema, devuelve
+la carpeta a su estado anterior y recupera los documentos desde Git (necesita Git y la carpeta
+`.git`). Confirma antes que todo esté commiteado. El código está en `FASE 2/DonaLaura/launcher/`;
+tras cambiar el frontend o el lanzador se vuelve a generar con `python construir_entrega.py`
+(requiere Node.js). La interfaz compilada, `frontend/dist`, se sube a Git a propósito.
+
+## Uso diario en Windows (instalación manual)
 
 Con las dependencias y PostgreSQL configurados:
 

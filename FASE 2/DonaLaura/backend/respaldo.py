@@ -14,7 +14,7 @@ import psycopg
 from psycopg import sql
 from database import conectar_bd, BASE_DIR
 
-CARPETA = BASE_DIR.parents[2] / ".local" / "backups"
+CARPETA = Path(os.getenv("AGRICOLIX_LOCAL") or BASE_DIR.parents[2] / ".local") / "backups"
 def ahora():
     return datetime.now(ZoneInfo("America/Santiago"))
 
@@ -22,7 +22,7 @@ def ahora():
 def herramientas():
     with conectar_bd() as c:
         version = c.info.server_version // 10000
-    base = Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "PostgreSQL" / str(version) / "bin"
+    base = Path(os.getenv("PG_BIN") or Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "PostgreSQL" / str(version) / "bin")
     dump = str(base / "pg_dump.exe") if (base / "pg_dump.exe").exists() else shutil.which("pg_dump")
     restore = str(base / "pg_restore.exe") if (base / "pg_restore.exe").exists() else shutil.which("pg_restore")
     if not dump or not restore:

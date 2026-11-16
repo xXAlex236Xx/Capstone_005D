@@ -35,6 +35,8 @@ logs/
 # ---------- NODE / REACT / VITE ----------
 node_modules/
 dist/
+# La interfaz compilada SÍ se sube: el usuario final no tiene Node para generarla.
+!frontend/dist/
 build/
 
 npm-debug.log*

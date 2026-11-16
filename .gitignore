@@ -9,3 +9,11 @@ node_modules/
 dist/
 .local/
 output/pdf/
+
+# Componentes de la entrega (se generan con launcher/construir_entrega.py)
+FASE 2/DonaLaura/runtime/
+agricolix data/runtime/
+agricolix data/datos/
+# La interfaz compilada SÍ se sube (el usuario final no tiene Node).
+!FASE 2/DonaLaura/frontend/dist/
+!agricolix data/frontend/dist/
