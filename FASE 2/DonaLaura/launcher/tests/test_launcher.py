@@ -934,3 +934,66 @@ def test_buscar_edge_encuentra_la_instalacion_o_devuelve_none(monkeypatch, tmp_p
     ruta.write_text("x")
     monkeypatch.setenv("ProgramFiles", str(tmp_path / "pf"))
     assert agricolix.buscar_edge() == ruta
+
+
+# ==========================================================
+# VISUAL C++ (lo necesita PostgreSQL; en un PC limpio puede faltar)
+# ==========================================================
+def preparar_windows(monkeypatch, tmp_path, con_dll):
+    sistema32 = tmp_path / "Windows" / "System32"
+    sistema32.mkdir(parents=True)
+    if con_dll:
+        for dll in agricolix.DLL_VISUAL_CPP:
+            (sistema32 / dll).write_text("x")
+    monkeypatch.setenv("SystemRoot", str(tmp_path / "Windows"))
+
+
+def test_visual_cpp_se_detecta(sistema, monkeypatch, tmp_path):
+    preparar_windows(monkeypatch, tmp_path, True)
+    assert sistema.visual_cpp_instalado()
+    (tmp_path / "Windows" / "System32" / "msvcp140.dll").unlink()
+    assert not sistema.visual_cpp_instalado()
+
+
+def test_si_visual_cpp_esta_no_descarga_nada(sistema, monkeypatch, tmp_path):
+    preparar_windows(monkeypatch, tmp_path, True)
+    monkeypatch.setattr(sistema, "descargar", lambda *a: pytest.fail("no debía descargar"))
+    sistema.asegurar_visual_cpp(sistema.datos)
+
+
+def test_si_falta_visual_cpp_lo_descarga_y_lo_instala(sistema, monkeypatch, tmp_path):
+    preparar_windows(monkeypatch, tmp_path, False)
+    pasos = []
+
+    class R:
+        returncode, stdout, stderr = 3010, "", ""   # instalado, pide reiniciar
+    monkeypatch.setattr(sistema, "descargar", lambda url, destino, etiqueta: pasos.append(url))
+    monkeypatch.setattr(sistema, "powershell", lambda script, **v: pasos.append(v) or R())
+    sistema.asegurar_visual_cpp(sistema.datos)
+    assert pasos[0] == agricolix.URL_VISUAL_CPP
+    assert pasos[1]["AGX_INSTALADOR"].endswith("vc_redist.x64.exe")
+
+
+def test_si_el_usuario_rechaza_el_permiso_da_un_error_claro(sistema, monkeypatch, tmp_path):
+    preparar_windows(monkeypatch, tmp_path, False)
+
+    class R:
+        returncode, stdout, stderr = 1, "", ""
+    monkeypatch.setattr(sistema, "descargar", lambda *a: None)
+    monkeypatch.setattr(sistema, "powershell", lambda script, **v: R())
+    with pytest.raises(ErrorAgricolix, match="Visual C"):
+        sistema.asegurar_visual_cpp(sistema.datos)
+
+
+def test_sin_internet_para_visual_cpp_no_se_toca_la_carpeta(tmp_path, monkeypatch):
+    crear_proyecto(tmp_path)
+    s = Sistema(tmp_path)
+    preparar_windows(monkeypatch, tmp_path, False)
+
+    def sin_internet(*a):
+        raise ErrorAgricolix("No se pudieron descargar los componentes")
+    monkeypatch.setattr(s, "descargar", sin_internet)
+    with pytest.raises(ErrorAgricolix):
+        s.ordenar()
+    assert (tmp_path / "FASE 1" / "informe.docx").is_file()
+    assert (tmp_path / "FASE 2" / "DonaLaura" / "backend" / "main.py").is_file()

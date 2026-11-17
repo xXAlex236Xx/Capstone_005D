@@ -43,6 +43,11 @@ NOMBRE_BD = "dona_laura_db"
 URL_WEB = f"http://127.0.0.1:{PUERTO_WEB}"
 URL_API = f"http://127.0.0.1:{PUERTO_API}/health"
 SOPORTE = "Si el problema continúa, contacta con soporte."
+URL_VISUAL_CPP = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
+# Bibliotecas del runtime de Visual C++ 2015-2022 que necesita PostgreSQL.
+DLL_VISUAL_CPP = ("vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll")
+# Códigos de salida del instalador que significan "quedó instalado" (3010 pide reiniciar; 1638 ya había uno más nuevo).
+INSTALADOR_VISUAL_CPP_OK = (0, 1638, 3010)
 INTENTOS_DESCARGA = 5
 ESPERAS_DESCARGA = (2, 5, 10, 15)  # segundos entre reintentos
 
@@ -394,10 +399,31 @@ class Sistema:
                         shutil.copyfileobj(origen, f)
         (destino / ".listo").write_text("1", encoding="utf-8")
 
+    def visual_cpp_instalado(self):
+        """True si Windows ya tiene el runtime de Visual C++ 2015-2022 (x64)."""
+        sistema32 = Path(os.environ.get("SystemRoot", "C:\\Windows")) / "System32"
+        return all((sistema32 / dll).is_file() for dll in DLL_VISUAL_CPP)
+
+    def asegurar_visual_cpp(self, base):
+        """PostgreSQL necesita el runtime de Visual C++; en un PC limpio puede faltar. Si falta, se instala."""
+        if self.visual_cpp_instalado():
+            return
+        instalador = base / "runtime" / "_descargas" / "vc_redist.x64.exe"
+        self.descargar(URL_VISUAL_CPP, instalador, "un componente de Windows (Visual C++)")
+        self.avisar("Instalando un componente de Windows (Visual C++). Si Windows pide permiso, acéptalo...")
+        r = self.powershell(
+            "try { $p = Start-Process -FilePath $env:AGX_INSTALADOR -ArgumentList '/install','/quiet','/norestart' "
+            "-Verb RunAs -Wait -PassThru -ErrorAction Stop; exit $p.ExitCode } catch { exit 1 }",
+            AGX_INSTALADOR=str(instalador))
+        if r.returncode not in INSTALADOR_VISUAL_CPP_OK and not self.visual_cpp_instalado():
+            raise ErrorAgricolix("No se pudo instalar el componente de Windows que necesita la base de datos "
+                                 "(Visual C++). Si Windows pidió permiso, hay que aceptarlo. " + SOPORTE)
+
     def instalar_componentes(self, base=None):
         """Descarga e instala lo que falte. Se hace antes de eliminar o mover cualquier cosa."""
         base = base or self.datos
         runtime = base / "runtime"
+        self.asegurar_visual_cpp(base)
         if not (runtime / "python" / ".listo").is_file():
             self.instalar_python(base)
         if not (runtime / "postgres" / ".listo").is_file():
@@ -652,9 +678,10 @@ class Sistema:
         self.usar_base(lambda: self.script_backend("respaldo.py"))
 
     # ---------- acceso directo en el escritorio ----------
-    def powershell(self, script):
+    def powershell(self, script, **variables):
         env = os.environ.copy()
         env["AGX_EXE"] = str(self.exe or "")
+        env.update(variables)
         return subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", script], env=env,
                               capture_output=True, text=True, encoding="utf-8", errors="replace",
                               creationflags=SIN_VENTANA, timeout=60)
