@@ -1,5 +1,3 @@
 @echo off
-pushd "%~dp0FASE 2\DonaLaura\backend"
-.venv\Scripts\python.exe respaldo.py
-popd
+powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File "%~dp0scripts\respaldar.ps1"
 pause

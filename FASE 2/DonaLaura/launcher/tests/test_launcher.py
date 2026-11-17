@@ -22,7 +22,7 @@ LAUNCHER = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(LAUNCHER))
 
 import agricolix  # noqa: E402
-from agricolix import ErrorAgricolix, Sistema  # noqa: E402
+from agricolix import ErrorAgricolix, FaltaCuenta, Sistema  # noqa: E402
 
 
 # ==========================================================
@@ -177,7 +177,7 @@ def crear_proyecto(raiz):
     (raiz / "FASE 3" / "presentacion.pptx").write_text("ppt")
     (raiz / "scripts").mkdir()
     (raiz / "scripts" / "iniciar.ps1").write_text("x")
-    for nombre in agricolix.ELIMINAR:
+    for nombre in agricolix.ELIMINAR + agricolix.CONSERVAR:
         if nombre.endswith((".md", ".cmd")):
             (raiz / nombre).write_text(nombre)
     sistema = raiz / "FASE 2" / "DonaLaura"
@@ -210,6 +210,12 @@ def test_ordenar_mueve_el_sistema_y_elimina_solo_lo_previsto(tmp_path, monkeypat
     assert (tmp_path / "agricolix data" / "frontend" / "dist" / "index.html").is_file()
     for nombre in agricolix.ELIMINAR:
         assert not (tmp_path / nombre).exists(), nombre
+    # Los accesos .cmd y sus scripts no se borran: pasan a 'agricolix data'
+    for nombre in agricolix.CONSERVAR:
+        assert not (tmp_path / nombre).exists(), nombre
+        assert (tmp_path / "agricolix data" / nombre).exists(), nombre
+    assert (tmp_path / "agricolix data" / "Iniciar Agricolix.cmd").read_text() == "Iniciar Agricolix.cmd"
+    assert (tmp_path / "agricolix data" / "scripts" / "iniciar.ps1").read_text() == "x"
     # Lo que no está en la lista se respeta
     assert (tmp_path / "Agricolix.exe").is_file()
     assert (tmp_path / "mis_planillas.xlsx").read_text() == "datos de la persona"
@@ -257,7 +263,7 @@ def test_ordenar_elimina_archivos_de_solo_lectura(tmp_path, monkeypatch):
 
 
 def test_ordenar_no_sigue_enlaces_hacia_fuera(tmp_path, monkeypatch):
-    """Si 'scripts' fuera un enlace a otra carpeta, se quita el enlace pero no su contenido."""
+    """Si 'scripts' fuera un enlace a otra carpeta, se mueve el enlace pero no se toca su contenido."""
     ajena = tmp_path / "ajena"
     ajena.mkdir()
     (ajena / "importante.txt").write_text("no borrar")
@@ -583,7 +589,7 @@ def repo_base(tmp_path_factory):
     raiz.mkdir()
     crear_proyecto(raiz)
     shutil.rmtree(raiz / ".git")
-    (raiz / ".gitignore").write_text(".env\n.local/\nagricolix data/datos/\n")
+    (raiz / ".gitignore").write_text(".env\n.local/\nagricolix data/datos/\nFASE 2/DonaLaura/datos/\n")
     git(raiz, "init", "-q")
     git(raiz, "add", "-A")
     git(raiz, "commit", "-q", "-m", "inicial")
@@ -617,16 +623,49 @@ def test_restaurar_dos_veces_seguidas_funciona(repo):
         assert git(repo.raiz, "status", "--porcelain") == ""
 
 
-def test_restaurar_borra_la_base_que_genero_agricolix(repo):
+def test_restaurar_conserva_la_base_y_la_cuenta_que_genero_agricolix(repo):
     repo.ordenar()
     repo.preparar_env()
     (repo.datos / "datos" / "postgres").mkdir(parents=True)
-    repo.local.mkdir(exist_ok=True)
+    (repo.datos / "datos" / "postgres" / "PG_VERSION").write_text("18")
+    env_antes = (repo.backend / ".env").read_text(encoding="utf-8")
     repo.restaurar()
     base = repo.raiz / "FASE 2" / "DonaLaura"
-    assert not (base / "datos").exists()
-    assert not (base / ".local").exists()
-    assert not (base / "backend" / ".env").exists()
+    assert (base / "datos" / "postgres" / "PG_VERSION").is_file()
+    assert (base / "backend" / ".env").read_text(encoding="utf-8") == env_antes
+    assert (base / ".local" / "restaurado").is_file()
+    assert git(repo.raiz, "status", "--porcelain") == ""      # nada de eso ensucia Git
+
+
+def test_despues_de_restaurar_se_pregunta_por_la_cuenta_y_una_vez(repo):
+    repo.ordenar()
+    repo.preparar_env()
+    repo.restaurar()
+    repo.ordenar()
+    assert repo.cuenta_anterior_pendiente()
+    repo.decidir_cuenta_anterior()
+    assert not repo.cuenta_anterior_pendiente()
+
+
+def test_no_se_pregunta_si_la_base_es_del_desarrollador(repo):
+    repo.ordenar()
+    (repo.backend / ".env").write_text("DB_HOST=127.0.0.1\nDB_PORT=5432\nDB_PASSWORD=mia\n")
+    repo.local.mkdir(exist_ok=True)
+    (repo.local / "restaurado").write_text("1")
+    assert not repo.cuenta_anterior_pendiente()
+
+
+def test_reemplazar_cuenta_usa_el_modo_reemplazar(sistema, monkeypatch):
+    pedidos = []
+
+    class R:
+        returncode, stdout = 0, ""
+    monkeypatch.setattr(sistema, "usar_base", lambda f: f())
+    monkeypatch.setattr(sistema, "preparar_base", lambda: None)
+    monkeypatch.setattr(sistema, "script_admin", lambda arg, extra=None: pedidos.append((arg, extra["AGRICOLIX_ADMIN_USUARIO"])) or R())
+    sistema.crear_cuenta("nueva.cuenta", "una-clave-larga-1", reemplazar=True)
+    sistema.crear_cuenta("otra.cuenta", "una-clave-larga-1")
+    assert pedidos == [("--reemplazar", "nueva.cuenta"), ("--crear", "otra.cuenta")]
 
 
 def test_restaurar_conserva_el_env_y_los_respaldos_del_desarrollador(repo):
@@ -790,3 +829,62 @@ def test_web_api_no_se_confunde_con_rutas_parecidas(web):
     estado, cuerpo, _ = pedir(web.puerto, "GET", "/apiario")
     assert b"INDEX" in cuerpo
     assert web.backend == {}
+
+
+# ==========================================================
+# DEMOSTRACIÓN Y RESPALDO (accesos .cmd)
+# ==========================================================
+@pytest.fixture
+def sistema_demo(sistema, monkeypatch):
+    """Sistema con todo simulado: registra qué scripts del backend y qué pasos se ejecutan."""
+    pasos = []
+    sistema.local.mkdir(parents=True)
+    monkeypatch.setattr(sistema, "instalar_componentes", lambda base=None: None)
+    monkeypatch.setattr(sistema, "preparar_env", lambda: None)
+    monkeypatch.setattr(sistema, "apagar", lambda: pasos.append("apagar"))
+    monkeypatch.setattr(sistema, "preparar_postgres", lambda: pasos.append("postgres"))
+    monkeypatch.setattr(sistema, "preparar_base", lambda: pasos.append("base"))
+    monkeypatch.setattr(sistema, "consultar_sin_usuarios", lambda: False)
+    monkeypatch.setattr(sistema, "iniciar", lambda: pasos.append("iniciar"))
+    monkeypatch.setattr(sistema, "script_backend", lambda *a: pasos.append(a))
+    sistema.pasos = pasos
+    return sistema
+
+
+def test_demostracion_la_crea_si_no_existe_y_la_activa(sistema_demo):
+    sistema_demo.cambiar_datos(True)
+    assert sistema_demo.pasos == ["apagar", "postgres", "base", ("demo.py", "--crear"),
+                                  ("demo.py", "--activar"), "iniciar"]
+
+
+def test_demostracion_no_la_regenera_si_ya_existe(sistema_demo):
+    (sistema_demo.local / "demostracion.json").write_text("{}")
+    sistema_demo.cambiar_datos(True)
+    assert ("demo.py", "--crear") not in sistema_demo.pasos
+    assert ("demo.py", "--activar") in sistema_demo.pasos
+
+
+def test_volver_a_datos_reales(sistema_demo):
+    (sistema_demo.local / "demostracion.json").write_text("{}")
+    sistema_demo.cambiar_datos(False)
+    assert ("demo.py", "--original") in sistema_demo.pasos
+    assert sistema_demo.pasos[-1] == "iniciar"
+
+
+def test_volver_a_datos_reales_sin_demostracion_no_cambia_nada(sistema_demo):
+    sistema_demo.cambiar_datos(False)
+    assert not any(isinstance(p, tuple) for p in sistema_demo.pasos)
+
+
+def test_demostracion_sin_cuenta_pide_crearla_y_no_enciende(sistema_demo, monkeypatch):
+    monkeypatch.setattr(sistema_demo, "consultar_sin_usuarios", lambda: True)
+    monkeypatch.setattr(sistema_demo, "detener_postgres", lambda: sistema_demo.pasos.append("detener_pg"))
+    with pytest.raises(FaltaCuenta):
+        sistema_demo.cambiar_datos(True)
+    assert "iniciar" not in sistema_demo.pasos and "detener_pg" in sistema_demo.pasos
+
+
+def test_respaldar_ejecuta_el_script_con_la_base_encendida(sistema_demo, monkeypatch):
+    monkeypatch.setattr(sistema_demo, "usar_base", lambda funcion: funcion())
+    sistema_demo.respaldar()
+    assert sistema_demo.pasos == [("respaldo.py",)]

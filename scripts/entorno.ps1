@@ -1,6 +1,17 @@
-param([switch]$Original)
+﻿param([switch]$Original)
 $ErrorActionPreference = 'Stop'
 $raizAgricolix = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot 'portatil.ps1')
+if ($EsPortatil) {
+    try {
+        Invoke-Portatil $(if ($Original) { '--datos-reales' } else { '--demostracion' })
+        Start-Process 'http://127.0.0.1:5173'
+        exit 0
+    } catch {
+        Write-Host "No se pudo cambiar el entorno: $($_.Exception.Message)" -ForegroundColor Red
+        exit 1
+    }
+}
 $backendAgricolix = Join-Path $raizAgricolix 'FASE 2\DonaLaura\backend'
 $pythonAgricolix = Join-Path $backendAgricolix '.venv\Scripts\python.exe'
 try {

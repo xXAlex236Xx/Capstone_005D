@@ -42,11 +42,14 @@ def hay_usuarios():
         return conexion.execute("SELECT 1 FROM usuarios LIMIT 1").fetchone() is not None
 
 
-def crear_con_datos():
+def crear_con_datos(reemplazar=False):
     """Crea el primer administrador con el usuario y la contraseña que eligió la persona.
 
     Los datos llegan por variables de entorno (AGRICOLIX_ADMIN_USUARIO y AGRICOLIX_ADMIN_PASSWORD)
     para que la contraseña no aparezca en la línea de comandos.
+
+    Con reemplazar=True las cuentas anteriores se desactivan (no se borran, porque el historial de
+    pagos y la auditoría se refieren a ellas), se cierran sus sesiones y queda solo la cuenta nueva.
     """
     usuario = os.getenv("AGRICOLIX_ADMIN_USUARIO", "").strip().lower()
     password = os.getenv("AGRICOLIX_ADMIN_PASSWORD", "")
@@ -58,12 +61,20 @@ def crear_con_datos():
         sys.exit(3)
     with conectar_bd() as conexion:
         conexion.execute("LOCK TABLE usuarios IN EXCLUSIVE MODE")
-        if conexion.execute("SELECT 1 FROM usuarios LIMIT 1").fetchone():
+        if reemplazar:
+            conexion.execute("UPDATE usuarios SET activo=FALSE WHERE usuario<>%s", (usuario,))
+            conexion.execute("DELETE FROM sesiones")
+            existente = conexion.execute("UPDATE usuarios SET password_hash=%s, rol='administrador', activo=TRUE "
+                                         "WHERE usuario=%s RETURNING 1", (hash_password(password), usuario)).fetchone()
+            if existente:
+                print("Cuenta reemplazada.")
+                return
+        elif conexion.execute("SELECT 1 FROM usuarios LIMIT 1").fetchone():
             print("Ya existen usuarios; no se modificó ninguna cuenta.")
             sys.exit(2)
         conexion.execute("INSERT INTO usuarios(usuario,nombre,password_hash,rol) VALUES (%s,%s,%s,%s)",
                          (usuario, usuario, hash_password(password), "administrador"))
-    print("Administrador creado.")
+    print("Cuenta reemplazada." if reemplazar else "Administrador creado.")
 
 
 if __name__ == "__main__":
@@ -73,5 +84,7 @@ if __name__ == "__main__":
         print("si" if hay_usuarios() else "no")
     elif "--crear" in sys.argv:
         crear_con_datos()
+    elif "--reemplazar" in sys.argv:
+        crear_con_datos(reemplazar=True)
     else:
         crear_primero()

@@ -1,6 +1,18 @@
 ﻿param([switch]$NoBrowser)
 $ErrorActionPreference = 'Stop'
 $raizAgricolix = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot 'portatil.ps1')
+if ($EsPortatil) {
+    try {
+        Invoke-Portatil '--iniciar'
+        Write-Host 'Agricolix disponible en http://127.0.0.1:5173'
+        if (-not $NoBrowser) { Start-Process 'http://127.0.0.1:5173' }
+        exit 0
+    } catch {
+        Write-Host "No se pudo iniciar Agricolix: $($_.Exception.Message)" -ForegroundColor Red
+        exit 1
+    }
+}
 $backendAgricolix = Join-Path $raizAgricolix 'FASE 2\DonaLaura\backend'
 $frontendAgricolix = Join-Path $raizAgricolix 'FASE 2\DonaLaura\frontend'
 $logsAgricolix = Join-Path $raizAgricolix '.local'

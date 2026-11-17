@@ -9,6 +9,7 @@
 # Uso normal: doble clic en Agricolix.exe (sin consola).
 # Pruebas:    Agricolix.exe --raiz <carpeta> --abrir | --ordenar
 #             | --iniciar | --apagar | --estado | --restaurar
+#             | --demostracion | --datos-reales | --respaldar
 #             | --crear-cuenta (usuario y contraseña por variables
 #               AGRICOLIX_ADMIN_USUARIO y AGRICOLIX_ADMIN_PASSWORD)
 # ==========================================================
@@ -49,6 +50,11 @@ ESPERAS_DESCARGA = (2, 5, 10, 15)  # segundos entre reintentos
 ELIMINAR = [
     "FASE 1", "FASE 2", "FASE 3",
     "README.md", "DEMOSTRACION.md", "PRUEBA_OPERATIVA.md",
+]
+
+# Los accesos .cmd (y los scripts que usan) no se eliminan: se mueven a 'agricolix data'
+# y funcionan desde ahí. Restaurar los devuelve a la carpeta del proyecto.
+CONSERVAR = [
     "Iniciar Agricolix.cmd", "Detener Agricolix.cmd", "Respaldar Agricolix.cmd",
     "Usar demostracion.cmd", "Volver a datos reales.cmd",
     "scripts",
@@ -161,6 +167,17 @@ class Sistema:
                 continue
             try:
                 borrar(destino)
+            except OSError:
+                fallos.append(nombre)
+        for nombre in CONSERVAR:
+            origen_acceso = self.raiz / nombre
+            if not (origen_acceso.exists() or origen_acceso.is_symlink()):
+                continue
+            try:
+                if (self.datos / nombre).exists():
+                    borrar(origen_acceso)  # ya viene en el sistema: no se duplica
+                else:
+                    shutil.move(str(origen_acceso), str(self.datos / nombre))
             except OSError:
                 fallos.append(nombre)
         return fallos
@@ -466,8 +483,10 @@ class Sistema:
             return self.consultar_sin_usuarios()
         return self.usar_base(consulta)
 
-    def crear_cuenta(self, usuario, password):
-        """Crea el primer administrador con el usuario y la contraseña que eligió la persona."""
+    def crear_cuenta(self, usuario, password, reemplazar=False):
+        """Crea el primer administrador con el usuario y la contraseña que eligió la persona.
+
+        Con reemplazar=True las cuentas anteriores dejan de poder entrar; los datos se conservan."""
         usuario = usuario.strip().lower()
         problema = validar_cuenta(usuario, password)
         if problema:
@@ -475,7 +494,7 @@ class Sistema:
 
         def crear():
             self.preparar_base()
-            return self.script_admin("--crear", {"AGRICOLIX_ADMIN_USUARIO": usuario,
+            return self.script_admin("--reemplazar" if reemplazar else "--crear", {"AGRICOLIX_ADMIN_USUARIO": usuario,
                                                  "AGRICOLIX_ADMIN_PASSWORD": password})
         r = self.usar_base(crear)
         if r.returncode in (2, 3):
@@ -483,6 +502,14 @@ class Sistema:
             raise ErrorAgricolix((r.stdout or "").strip())
         if r.returncode:
             raise ErrorAgricolix("No se pudo crear la cuenta. " + SOPORTE)
+
+    # ---------- cuenta anterior después de restaurar ----------
+    def cuenta_anterior_pendiente(self):
+        """True si se restauró la carpeta y falta decidir si se mantiene la cuenta de acceso anterior."""
+        return (self.local / "restaurado").is_file() and self.bd_propia()
+
+    def decidir_cuenta_anterior(self):
+        (self.local / "restaurado").unlink(missing_ok=True)
 
     # ---------- primera apertura ----------
     def preparar(self):
@@ -553,6 +580,48 @@ class Sistema:
         self.apagar()
         self.iniciar()
 
+    # ---------- demostración y respaldo (los usan los accesos .cmd) ----------
+    def script_backend(self, *args):
+        """Ejecuta un script del backend con el Python incluido y muestra su salida."""
+        r = subprocess.run([str(self.python), *[str(a) for a in args]], cwd=self.backend, env=self.entorno(),
+                           capture_output=True, text=True, encoding="utf-8", errors="replace",
+                           creationflags=SIN_VENTANA, timeout=1800)
+        if (r.stdout or "").strip():
+            print(r.stdout.strip())
+        if r.returncode:
+            detalle = (r.stdout or "").strip().splitlines()[-1:] or (r.stderr or "").strip().splitlines()[-1:]
+            raise ErrorAgricolix((detalle[0] + " " if detalle else "") + SOPORTE)
+
+    def cambiar_datos(self, demostracion):
+        """Apaga, cambia entre la base real y la de demostración, y vuelve a encender."""
+        self.instalar_componentes()
+        self.local.mkdir(parents=True, exist_ok=True)
+        self.preparar_env()
+        self.apagar()
+        try:
+            self.preparar_postgres()
+            self.preparar_base()
+            if self.consultar_sin_usuarios():
+                raise FaltaCuenta("Falta crear la cuenta de acceso. Abre Agricolix.exe primero.")
+            if demostracion:
+                if not (self.local / "demostracion.json").is_file():
+                    self.avisar("Creando los datos de demostración (puede tardar unos minutos)...")
+                    self.script_backend("demo.py", "--crear")
+                self.script_backend("demo.py", "--activar")
+            elif (self.local / "demostracion.json").is_file():
+                self.script_backend("demo.py", "--original")
+        except BaseException:
+            self.detener_postgres()
+            raise
+        self.iniciar()
+
+    def respaldar(self):
+        """Crea un respaldo de la base en uso (queda en .local/backups)."""
+        self.instalar_componentes()
+        self.local.mkdir(parents=True, exist_ok=True)
+        self.preparar_env()
+        self.usar_base(lambda: self.script_backend("respaldo.py"))
+
     # ---------- acceso directo en el escritorio ----------
     def powershell(self, script):
         env = os.environ.copy()
@@ -606,13 +675,19 @@ class Sistema:
         self.avisar("Restaurando la carpeta del proyecto...")
         env = self.backend / ".env"
         generado = env.is_file() and env.read_text(encoding="utf-8").startswith("# Generado por Agricolix")
-        if generado or not env.is_file():
+        if generado:
+            # La base, la configuración y la cuenta se conservan: al volver a abrir Agricolix
+            # se pregunta si se mantiene la cuenta anterior o se crea una nueva.
+            self.local.mkdir(parents=True, exist_ok=True)
+            (self.local / "restaurado").write_text("1", encoding="utf-8")
+        elif not env.is_file():
             shutil.rmtree(self.datos / "datos", ignore_errors=True)
             shutil.rmtree(self.local, ignore_errors=True)
-            if generado:
-                env.unlink()
         elif self.local.is_dir() and not (self.raiz / ".local").exists():
             shutil.move(str(self.local), str(self.raiz / ".local"))
+        for nombre in CONSERVAR:  # los accesos .cmd vuelven a la raíz, donde estaban
+            if (self.datos / nombre).exists() and not (self.raiz / nombre).exists():
+                shutil.move(str(self.datos / nombre), str(self.raiz / nombre))
         destino = self.raiz / "FASE 2" / "DonaLaura"
         destino.parent.mkdir(exist_ok=True)
         try:
@@ -845,9 +920,9 @@ def ventana(sistema):
         sistema.iniciar()
         webbrowser.open(URL_WEB)
 
-    def aplicar_configuracion(datos):
+    def aplicar_configuracion(datos, reemplazar=False):
         if "usuario" in datos:
-            sistema.crear_cuenta(datos["usuario"], datos["password"])
+            sistema.crear_cuenta(datos["usuario"], datos["password"], reemplazar)
         if "clave_openai" in datos:
             sistema.guardar_clave(datos["clave_openai"])
         sistema.iniciar()
@@ -884,6 +959,19 @@ def ventana(sistema):
                 sistema.crear_acceso_directo()
             except ErrorAgricolix as e:
                 messagebox.showwarning("Agricolix", str(e))
+        if not sin_cuenta and sistema.cuenta_anterior_pendiente():
+            # Se acaba de restaurar la carpeta: la cuenta de antes sigue en la base de datos.
+            mantener = messagebox.askyesno(
+                "Cuenta de acceso",
+                "Se encontró la cuenta de acceso creada anteriormente.\n\n"
+                "¿Quieres seguir usándola?\n\n"
+                "Sí: mantener la cuenta anterior.\n"
+                "No: crear una cuenta nueva (la anterior deja de poder entrar; los datos se conservan).")
+            sistema.decidir_cuenta_anterior()
+            if not mantener:
+                formulario(True, sistema.clave_pendiente(),
+                           lambda datos: trabajo(lambda: aplicar_configuracion(datos, True)))
+                return
         # Si la cuenta ya existe y solo falta la clave, el formulario pide únicamente la clave.
         if sin_cuenta or sistema.clave_pendiente():
             formulario(sin_cuenta, sistema.clave_pendiente(),
@@ -896,9 +984,9 @@ def ventana(sistema):
         if messagebox.askyesno(
                 "Restaurar (solo desarrolladores)",
                 "Esto deja la carpeta como estaba antes de abrir Agricolix por primera vez.\n\n"
-                "Se apaga el sistema, se elimina la base de datos de prueba y los accesos que Agricolix "
-                "generó, y se recuperan desde Git los documentos que se habían eliminado. "
-                "Si tu .env usa otra base de datos, esa no se toca.\n\n¿Continuar?"):
+                "Se apaga el sistema y se recuperan desde Git los documentos que se habían eliminado. "
+                "La base de datos y la cuenta de acceso se conservan: al volver a abrir Agricolix "
+                "se pregunta si quieres mantener la cuenta o crear una nueva.\n\n¿Continuar?"):
             trabajo(sistema.restaurar)
 
     def revisar():
@@ -955,7 +1043,12 @@ def main():
     grupo.add_argument("--iniciar", action="store_true")
     grupo.add_argument("--apagar", action="store_true")
     grupo.add_argument("--estado", action="store_true")
+    grupo.add_argument("--demostracion", action="store_true", help="Cambia a los datos de demostración")
+    grupo.add_argument("--datos-reales", action="store_true", help="Vuelve a los datos reales")
+    grupo.add_argument("--respaldar", action="store_true", help="Crea un respaldo de la base de datos")
     grupo.add_argument("--crear-cuenta", action="store_true", help="Crea la cuenta con AGRICOLIX_ADMIN_USUARIO/PASSWORD")
+    grupo.add_argument("--reemplazar-cuenta", action="store_true",
+                       help="Reemplaza la cuenta con AGRICOLIX_ADMIN_USUARIO/PASSWORD (conserva los datos)")
     grupo.add_argument("--acceso-directo", action="store_true", help="Crea el acceso directo en el escritorio")
     grupo.add_argument("--restaurar", action="store_true", help="Solo desarrolladores: deshace el orden")
     argumentos = analizador.parse_args()
@@ -975,9 +1068,19 @@ def main():
             sistema.apagar()
         elif argumentos.estado:
             print("encendido" if sistema.encendido() else "apagado")
+        elif argumentos.demostracion:
+            sistema.cambiar_datos(True)
+        elif argumentos.datos_reales:
+            sistema.cambiar_datos(False)
+        elif argumentos.respaldar:
+            sistema.respaldar()
         elif argumentos.crear_cuenta:
             sistema.crear_cuenta(os.getenv("AGRICOLIX_ADMIN_USUARIO", ""), os.getenv("AGRICOLIX_ADMIN_PASSWORD", ""))
             print("Cuenta creada.")
+        elif argumentos.reemplazar_cuenta:
+            sistema.crear_cuenta(os.getenv("AGRICOLIX_ADMIN_USUARIO", ""), os.getenv("AGRICOLIX_ADMIN_PASSWORD", ""),
+                                 reemplazar=True)
+            print("Cuenta reemplazada.")
         elif argumentos.acceso_directo:
             print("Acceso directo creado en:", sistema.crear_acceso_directo())
         elif argumentos.restaurar:

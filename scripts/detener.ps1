@@ -1,5 +1,10 @@
 ﻿$ErrorActionPreference = 'Stop'
 $raizAgricolix = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot 'portatil.ps1')
+if ($EsPortatil) {
+    try { Invoke-Portatil '--apagar'; exit 0 }
+    catch { Write-Host "No se pudo detener Agricolix: $($_.Exception.Message)" -ForegroundColor Red; exit 1 }
+}
 $archivoProcesos = Join-Path $raizAgricolix '.local\procesos.json'
 if (-not (Test-Path -LiteralPath $archivoProcesos)) { Write-Host 'No hay procesos registrados por el iniciador.'; exit 0 }
 $procesosAgricolix = Get-Content -LiteralPath $archivoProcesos -Raw | ConvertFrom-Json
