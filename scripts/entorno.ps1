@@ -5,7 +5,7 @@ $raizAgricolix = Split-Path -Parent $PSScriptRoot
 if ($EsPortatil) {
     try {
         Invoke-Portatil $(if ($Original) { '--datos-reales' } else { '--demostracion' })
-        Start-Process 'http://127.0.0.1:5173'
+        Abrir-Agricolix
         exit 0
     } catch {
         Write-Host "No se pudo cambiar el entorno: $($_.Exception.Message)" -ForegroundColor Red

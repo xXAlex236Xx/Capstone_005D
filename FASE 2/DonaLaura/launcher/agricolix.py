@@ -89,6 +89,35 @@ def puerto_abierto(puerto):
         return conexion.connect_ex(("127.0.0.1", puerto)) == 0
 
 
+def buscar_edge():
+    """Ruta de Microsoft Edge si está instalado, o None."""
+    for variable in ("ProgramFiles(x86)", "ProgramFiles", "LOCALAPPDATA"):
+        base = os.environ.get(variable)
+        if base:
+            ruta = Path(base) / "Microsoft" / "Edge" / "Application" / "msedge.exe"
+            if ruta.is_file():
+                return ruta
+    encontrado = shutil.which("msedge")
+    return Path(encontrado) if encontrado else None
+
+
+def abrir_web(url=None):
+    """Abre Agricolix como aplicación (ventana de Edge sin pestañas ni barra de direcciones).
+
+    Si Edge no está instalado o no se puede abrir, usa el navegador predeterminado.
+    """
+    url = url or URL_WEB
+    edge = buscar_edge()
+    if edge:
+        try:
+            subprocess.Popen([str(edge), f"--app={url}"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL, creationflags=SEPARADO)
+            return
+        except OSError:
+            pass
+    webbrowser.open(url)
+
+
 def borrar(ruta):
     def quitar_solo_lectura(funcion, camino, _error):
         os.chmod(camino, stat.S_IWRITE)
@@ -918,7 +947,7 @@ def ventana(sistema):
         if sistema.necesita_ordenar():
             sistema.preparar()
         sistema.iniciar()
-        webbrowser.open(URL_WEB)
+        abrir_web()
 
     def aplicar_configuracion(datos, reemplazar=False):
         if "usuario" in datos:
@@ -926,7 +955,7 @@ def ventana(sistema):
         if "clave_openai" in datos:
             sistema.guardar_clave(datos["clave_openai"])
         sistema.iniciar()
-        webbrowser.open(URL_WEB)
+        abrir_web()
 
     def guardar_solo_clave(datos):
         if not datos["clave_openai"]:
@@ -1017,7 +1046,7 @@ def ventana(sistema):
         raiz.destroy()
 
     boton_iniciar.config(command=lambda: trabajo(encender))
-    boton_abrir.config(command=lambda: webbrowser.open(URL_WEB))
+    boton_abrir.config(command=abrir_web)
     boton_apagar.config(command=lambda: trabajo(sistema.apagar))
     boton_clave.config(command=pedir_clave)
     boton_restaurar.config(command=pedir_restauracion)
@@ -1042,6 +1071,7 @@ def main():
     grupo.add_argument("--ordenar", action="store_true", help="Ordena la carpeta sin ventana ni preguntas")
     grupo.add_argument("--iniciar", action="store_true")
     grupo.add_argument("--apagar", action="store_true")
+    grupo.add_argument("--abrir-web", action="store_true", help="Abre Agricolix en Edge (modo aplicación) o en el navegador")
     grupo.add_argument("--estado", action="store_true")
     grupo.add_argument("--demostracion", action="store_true", help="Cambia a los datos de demostración")
     grupo.add_argument("--datos-reales", action="store_true", help="Vuelve a los datos reales")
@@ -1066,6 +1096,8 @@ def main():
             sistema.iniciar()
         elif argumentos.apagar:
             sistema.apagar()
+        elif argumentos.abrir_web:
+            abrir_web()
         elif argumentos.estado:
             print("encendido" if sistema.encendido() else "apagado")
         elif argumentos.demostracion:

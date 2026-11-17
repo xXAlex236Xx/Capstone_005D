@@ -6,7 +6,7 @@ if ($EsPortatil) {
     try {
         Invoke-Portatil '--iniciar'
         Write-Host 'Agricolix disponible en http://127.0.0.1:5173'
-        if (-not $NoBrowser) { Start-Process 'http://127.0.0.1:5173' }
+        if (-not $NoBrowser) { Abrir-Agricolix }
         exit 0
     } catch {
         Write-Host "No se pudo iniciar Agricolix: $($_.Exception.Message)" -ForegroundColor Red
@@ -56,7 +56,7 @@ try {
             Write-Host 'Agricolix disponible en http://127.0.0.1:5173'
             $primerAcceso = Join-Path $logsAgricolix 'primer-acceso.txt'
             if (Test-Path -LiteralPath $primerAcceso) { Write-Host "Acceso inicial: $primerAcceso" }
-            if (-not $NoBrowser) { Start-Process 'http://127.0.0.1:5173' -WindowStyle Hidden }
+            if (-not $NoBrowser) { Abrir-Agricolix }
             exit 0
         }
         Start-Sleep -Milliseconds 400

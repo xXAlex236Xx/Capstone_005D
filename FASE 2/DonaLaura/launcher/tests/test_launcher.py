@@ -888,3 +888,49 @@ def test_respaldar_ejecuta_el_script_con_la_base_encendida(sistema_demo, monkeyp
     monkeypatch.setattr(sistema_demo, "usar_base", lambda funcion: funcion())
     sistema_demo.respaldar()
     assert sistema_demo.pasos == [("respaldo.py",)]
+
+
+# ==========================================================
+# APERTURA EN EDGE (modo aplicación) CON RESPALDO AL NAVEGADOR
+# ==========================================================
+def test_abrir_web_usa_edge_en_modo_aplicacion(monkeypatch, tmp_path):
+    edge = tmp_path / "msedge.exe"
+    llamadas, web = [], []
+    monkeypatch.setattr(agricolix, "buscar_edge", lambda: edge)
+    monkeypatch.setattr(agricolix.subprocess, "Popen", lambda args, **kw: llamadas.append(args))
+    monkeypatch.setattr(agricolix.webbrowser, "open", lambda url: web.append(url))
+    agricolix.abrir_web()
+    assert llamadas == [[str(edge), f"--app={agricolix.URL_WEB}"]]
+    assert web == []
+
+
+def test_abrir_web_sin_edge_usa_el_navegador_predeterminado(monkeypatch):
+    web = []
+    monkeypatch.setattr(agricolix, "buscar_edge", lambda: None)
+    monkeypatch.setattr(agricolix.webbrowser, "open", lambda url: web.append(url))
+    agricolix.abrir_web()
+    assert web == [agricolix.URL_WEB]
+
+
+def test_abrir_web_si_edge_no_se_puede_abrir_usa_el_navegador(monkeypatch, tmp_path):
+    web = []
+
+    def falla(args, **kw):
+        raise OSError("no se pudo abrir")
+    monkeypatch.setattr(agricolix, "buscar_edge", lambda: tmp_path / "msedge.exe")
+    monkeypatch.setattr(agricolix.subprocess, "Popen", falla)
+    monkeypatch.setattr(agricolix.webbrowser, "open", lambda url: web.append(url))
+    agricolix.abrir_web()
+    assert web == [agricolix.URL_WEB]
+
+
+def test_buscar_edge_encuentra_la_instalacion_o_devuelve_none(monkeypatch, tmp_path):
+    for variable in ("ProgramFiles(x86)", "ProgramFiles", "LOCALAPPDATA"):
+        monkeypatch.setenv(variable, str(tmp_path / "vacio"))
+    monkeypatch.setattr(agricolix.shutil, "which", lambda nombre: None)
+    assert agricolix.buscar_edge() is None
+    ruta = tmp_path / "pf" / "Microsoft" / "Edge" / "Application" / "msedge.exe"
+    ruta.parent.mkdir(parents=True)
+    ruta.write_text("x")
+    monkeypatch.setenv("ProgramFiles", str(tmp_path / "pf"))
+    assert agricolix.buscar_edge() == ruta
