@@ -17,7 +17,7 @@ PUBLICAS = {"/", "/health", "/auth/login", "/entorno"}
 LECTURA = {"GET", "HEAD", "OPTIONS"}
 # Escrituras que un perfil de solo consulta sí puede usar (análisis, no modifican datos).
 ESCRITURA_PERMITIDA_A_CONSULTA = {
-    "/ia/chat", "/ia/agente", "/importacion/validar", "/importacion/vista-previa",
+    "/ia/chat", "/ia/agente", "/importacion/validar", "/importacion/vista-previa", "/importacion/analizar",
     "/auth/logout", "/auth/password",
 }
 SOLO_ADMIN_LECTURA = {"/usuarios", "/auditoria"}

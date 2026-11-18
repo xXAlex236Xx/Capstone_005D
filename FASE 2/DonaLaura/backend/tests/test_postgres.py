@@ -802,3 +802,45 @@ def test_referencia_repetida_con_clave_distinta_no_duplica_abonos(actor):
             with pytest.raises(HTTPException) as error: seguimiento.abonar(1,datos,actor)
             assert error.value.status_code==409
     assert seguimiento.listar()[0]["abonado"]==100
+
+
+def test_importacion_inteligente_crea_en_orden_y_recuerda_equivalencias(bd):
+    # Persona nueva, jornada nueva y labor nueva: se crea todo en una sola operación.
+    primera = main.LoteImportacion(registros=[
+        main.CosechaImportada(trabajador="Ana Soto", fecha=date(2026, 11, 2), kilos=30, labor="Limón",
+                              sectores=[main.SectorImportado(id_sector=1, kilos=30, horas=4)]),
+        main.CosechaImportada(trabajador="Ana Sotto", fecha=date(2026, 11, 3), kilos=20, labor="Limón",
+                              sectores=[main.SectorImportado(id_sector=1, kilos=20, horas=4)]),
+    ], decisiones={"Ana Soto": {"crear": True}, "Ana Sotto": {"igual_a": "Ana Soto"}}, crear_faltantes=True)
+    # Antes de guardar, sin decisiones el sistema pide aclarar el nombre.
+    previo = main.validar_importacion(main.LoteImportacion(registros=primera.registros))
+    assert previo["con_errores"] == 2
+    resultado = main.guardar_importacion(primera)
+    assert (resultado["trabajadores_creados"], resultado["jornadas_creadas"], resultado["labores_creadas"]) == (1, 2, 1)
+    with conectar_bd() as conexion:
+        assert conexion.execute("SELECT COUNT(*) FROM trabajadores WHERE nombre='Ana'").fetchone()[0] == 1
+        assert conexion.execute("SELECT COUNT(DISTINCT id_trabajador) FROM produccion p JOIN jornadas j USING (id_jornada) "
+                                "WHERE j.fecha >= '2026-11-02'").fetchone()[0] == 1
+
+    # La próxima vez "Ana Sotto" ya se reconoce sola (equivalencia guardada).
+    siguiente = main.LoteImportacion(registros=[main.CosechaImportada(
+        trabajador="Ana Sotto", fecha=date(2026, 11, 4), kilos=10, labor="Limón",
+        sectores=[main.SectorImportado(id_sector=1, kilos=10, horas=4)])], crear_faltantes=True)
+    assert main.validar_importacion(siguiente)["listos"] == 1
+    analisis = main.analizar_importacion(main.SolicitudAnalisis(registros=[
+        main.RegistroAnalisis(trabajador="Ana Sotto", fecha=date(2026, 11, 4), labor="Limón")]))
+    assert analisis["trabajadores"][0]["estado"] == "reconocido"
+    assert analisis["jornadas_nuevas"] == ["2026-11-04"]
+
+
+def test_si_un_registro_falla_no_queda_nada_creado(bd):
+    malo = main.LoteImportacion(registros=[main.CosechaImportada(
+        trabajador="Persona Nueva", fecha=date(2026, 11, 9), kilos=10,
+        sectores=[main.SectorImportado(id_sector=999, kilos=10, horas=4)])],  # sector inexistente
+        decisiones={"Persona Nueva": {"crear": True}}, crear_faltantes=True)
+    with pytest.raises(HTTPException) as error:
+        main.guardar_importacion(malo)
+    assert error.value.status_code == 409
+    with conectar_bd() as conexion:
+        assert conexion.execute("SELECT COUNT(*) FROM trabajadores").fetchone()[0] == 1
+        assert conexion.execute("SELECT COUNT(*) FROM jornadas").fetchone()[0] == 1

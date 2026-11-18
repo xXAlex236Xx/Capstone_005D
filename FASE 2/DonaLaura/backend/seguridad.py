@@ -82,7 +82,7 @@ def puede_acceder(rol, metodo, ruta):
         return rol == "administrador"
     if metodo in {"GET", "HEAD", "OPTIONS"} or ruta.startswith("/auth/"):
         return True
-    if ruta.startswith("/ia/") or ruta in {"/importacion/validar", "/importacion/vista-previa"}:
+    if ruta.startswith("/ia/") or ruta in {"/importacion/validar", "/importacion/vista-previa", "/importacion/analizar"}:
         return True
     if ruta.startswith("/tarifas") or ruta == "/pagos/cerrar":
         return rol == "administrador"
@@ -104,7 +104,7 @@ def nombre_operacion(metodo, ruta):
         "/labores": "Creación de labor", "/pagos/cerrar": "Cierre de semana de pagos",
         "/usuarios": "Creación de usuario", "/auth/logout": "Cierre de sesión",
         "/auth/password": "Cambio de contraseña", "/importacion/guardar": "Importación de cosechas",
-        "/importacion/validar": "Validación de planilla", "/importacion/vista-previa": "Vista previa de planilla",
+        "/importacion/validar": "Validación de planilla", "/importacion/analizar": "Análisis de planillas", "/importacion/vista-previa": "Vista previa de planilla",
         "/ia/agente": "Consulta al asistente", "/ia/chat": "Consulta al análisis local",
     }
     if ruta.startswith("/tarifas/"):
